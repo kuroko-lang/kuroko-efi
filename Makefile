@@ -5,11 +5,11 @@ KUROKO_CS = builtins.c chunk.c compiler.c debug.c exceptions.c fileio.c memory.c
             obj_list.c obj_numeric.c obj_range.c obj_set.c obj_str.c obj_tuple.c \
             obj_typing.c scanner.c table.c value.c vm.c
 
-SRC = $(patsubst %,kuroko/src/%,${KUROKO_CS}) $(wildcard *.c)
+SRC = $(patsubst %,kuroko/src/%,${KUROKO_CS}) $(wildcard src/*.c)
 OBJ = $(patsubst %.c,%.o,$(sort $(SRC)))
 
 CFLAGS = -DSTATIC_ONLY -DSTRICTLY_NO_THREADS -DNDEBUG -DKRK_ENABLE_DEBUG \
-         -ffreestanding -I. -Ikuroko/src/ -nostdinc -Iinclude -fno-stack-protector -fpic \
+         -ffreestanding -Isrc/ -Ikuroko/src/ -nostdinc -Iinclude -fno-stack-protector -fpic \
          -DEFI_PLATFORM -fshort-wchar -I/usr/include/efi -mno-red-zone \
          -I/usr/include/efi/x86_64 -DEFI_FUNCTION_WRAPPER
 
@@ -28,7 +28,7 @@ stage:
 	mkdir -p stage
 
 stage/disk.img: kuroko.efi Makefile | stage
-	-rm $@
+	-rm -f $@
 	fallocate -l 4M $@
 	mkfs.fat $@
 	mmd -i $@ efi efi/boot krk
@@ -40,4 +40,4 @@ cdimage.iso: stage/disk.img
 
 .PHONY: clean
 clean:
-	-rm -r *.o *.efi *.so kuroko/src/*.o *.iso stage
+	-rm -rf src/*.o *.efi *.so kuroko/src/*.o *.iso stage/disk.img
