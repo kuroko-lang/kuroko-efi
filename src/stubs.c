@@ -277,8 +277,8 @@ static void print_dec(unsigned long long value, unsigned int width, char * buf, 
 		n_width = 0;
 	} else {
 		unsigned long long val = value;
-		while (val > 10) {
-			val /= 10;
+		while (val >= 10UL) {
+			val /= 10UL;
 			n_width++;
 		}
 	}
