@@ -571,7 +571,7 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 
 					/* Okay, now we can do some real work... */
 
-					int isNegative = SIGNBIT(asBits);
+					int isNegative = !!SIGNBIT(asBits);
 					if (isNegative) {
 						*b++ = '-';
 						val = -val;
@@ -582,10 +582,15 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 					b = buf + i;
 					*b++ = '.';
 					i = b - buf;
-					for (unsigned long long j = 0; j < ((precision > -1 && precision < 8) ? precision : 8); ++j) {
+					for (unsigned long long j = 0; j < ((precision > -1 && precision < 16) ? precision : 16); ++j) {
 						if ((unsigned long long)(val * 100000.0) % 100000 == 0 && j != 0) break;
 						val = val - (unsigned long long)val;
 						val *= 10.0;
+						double roundy = ((double)(val - (unsigned long long)val) - 0.99999);
+						if (roundy < 0.00001 && roundy > -0.00001) {
+							print_dec((unsigned long long)(val) % 10 + 1, 0, buf, &i, 0, 0, 1);
+							break;
+						}
 						print_dec((unsigned long long)(val) % 10, 0, buf, &i, 0, 0, 1);
 					}
 					b = buf + i;
