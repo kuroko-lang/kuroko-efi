@@ -198,11 +198,6 @@ char * strcpy(char * restrict dest, const char * restrict src) {
 	return out;
 }
 
-#ifndef EFI_PLATFORM
-double strtod(const char *nptr, char **endptr) {
-	return strtol(nptr,endptr,10);
-}
-#else
 double strtod(const char *nptr, char **endptr) {
 	int sign = 1;
 	if (*nptr == '-') {
@@ -240,41 +235,12 @@ double strtod(const char *nptr, char **endptr) {
 
 	double expn = (double)sign;
 
-#if 0
-	if (*nptr == 'e' || *nptr == 'E') {
-		nptr++;
-
-		int exponent_sign = 1;
-
-		if (*nptr == '+') {
-			nptr++;
-		} else if (*nptr == '-') {
-			exponent_sign = -1;
-			nptr++;
-		}
-
-		int exponent = 0;
-
-		while (*nptr) {
-			if (*nptr < '0' || *nptr > '9') {
-				break;
-			}
-			exponent *= 10;
-			exponent += (*nptr - '0');
-			nptr++;
-		}
-
-		expn = __builtin_powpow(10.0,(double)(exponent * exponent_sign));
-	}
-#endif
-
 	if (endptr) {
 		*endptr = (char *)nptr;
 	}
 	double result = ((double)decimal_part + sub_part) * expn;
 	return result;
 }
-#endif
 
 FILE * stdout = NULL;
 FILE * stderr = NULL;
@@ -302,36 +268,22 @@ int puts(const char * s) {
 	return 0;
 }
 
-static void print_dec(unsigned int value, unsigned int width, char * buf, int * ptr, int fill_zero, int align_right, int precision) {
-	unsigned int n_width = 1;
-	unsigned int i = 9;
+static void print_dec(unsigned long long value, unsigned int width, char * buf, int * ptr, int fill_zero, int align_right, int precision) {
+	unsigned long long n_width = 1;
+	unsigned long long i = 9;
 	if (precision == -1) precision = 1;
 
 	if (value == 0) {
 		n_width = 0;
-	} else if (value < 10UL) {
-		n_width = 1;
-	} else if (value < 100UL) {
-		n_width = 2;
-	} else if (value < 1000UL) {
-		n_width = 3;
-	} else if (value < 10000UL) {
-		n_width = 4;
-	} else if (value < 100000UL) {
-		n_width = 5;
-	} else if (value < 1000000UL) {
-		n_width = 6;
-	} else if (value < 10000000UL) {
-		n_width = 7;
-	} else if (value < 100000000UL) {
-		n_width = 8;
-	} else if (value < 1000000000UL) {
-		n_width = 9;
 	} else {
-		n_width = 10;
+		unsigned long long val = value;
+		while (val > 10) {
+			val /= 10;
+			n_width++;
+		}
 	}
 
-	if (n_width < (unsigned int)precision) n_width = precision;
+	if (n_width < (unsigned long long)precision) n_width = precision;
 
 	int printed = 0;
 	if (align_right) {
@@ -343,8 +295,8 @@ static void print_dec(unsigned int value, unsigned int width, char * buf, int * 
 
 		i = n_width;
 		while (i > 0) {
-			unsigned int n = value / 10;
-			int r = value % 10;
+			unsigned long long n = value / 10;
+			long long r = value % 10;
 			buf[*ptr + i - 1] = r + '0';
 			i--;
 			value = n;
@@ -353,15 +305,15 @@ static void print_dec(unsigned int value, unsigned int width, char * buf, int * 
 	} else {
 		i = n_width;
 		while (i > 0) {
-			unsigned int n = value / 10;
-			int r = value % 10;
+			unsigned long long n = value / 10;
+			long long r = value % 10;
 			buf[*ptr + i - 1] = r + '0';
 			i--;
 			value = n;
 			printed++;
 		}
 		*ptr += n_width;
-		while (printed < (int)width) {
+		while (printed < (long long)width) {
 			buf[*ptr] = fill_zero ? '0' : ' ';
 			*ptr += 1;
 			printed += 1;
@@ -372,26 +324,26 @@ static void print_dec(unsigned int value, unsigned int width, char * buf, int * 
 /*
  * Hexadecimal to string
  */
-static void print_hex(unsigned int value, unsigned int width, char * buf, int * ptr) {
+static void print_hex(unsigned long long value, unsigned int width, char * buf, int * ptr) {
 	int i = width;
 
 	if (i == 0) i = 8;
 
-	unsigned int n_width = 1;
-	unsigned int j = 0x0F;
-	while (value > j && j < UINT32_MAX) {
+	unsigned long long n_width = 1;
+	unsigned long long j = 0x0F;
+	while (value > j && j < UINT64_MAX) {
 		n_width += 1;
 		j *= 0x10;
 		j += 0x0F;
 	}
 
-	while (i > (int)n_width) {
+	while (i > (long long)n_width) {
 		buf[*ptr] = '0';
 		*ptr += 1;
 		i--;
 	}
 
-	i = (int)n_width;
+	i = (long long)n_width;
 	while (i-- > 0) {
 		buf[*ptr] = "0123456789abcdef"[(value>>(i*4))&0xF];
 		*ptr += + 1;
@@ -509,39 +461,37 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 				if (!arg_width) {
 					arg_width = 8;
 					alt = 1;
+					if (sizeof(void*) == sizeof(long long)) big = 2;
 				}
 			case 'x': /* Hexadecimal number */
-				if (alt) {
-					*b++ = '0';
-					*b++ = 'x';
-				}
-				i = b - buf;
-				if (big == 2) {
-					unsigned long long val = (unsigned long long)va_arg(args, unsigned long long);
-					if (val > 0xFFFFFFFF) {
-						print_hex(val >> 32, arg_width > 8 ? (arg_width - 8) : 0, buf, &i);
-					} else if (arg_width > 8) {
-						for (int i = 0; i < arg_width - 8; ++i) *b++ = '0';
-						i = b - buf;
+				{
+					if (alt) {
+						*b++ = '0';
+						*b++ = 'x';
 					}
-					print_hex(val & 0xFFFFFFFF, arg_width > 8 ? 8 : arg_width, buf, &i);
-				} else {
-					print_hex((unsigned long)va_arg(args, unsigned long), arg_width, buf, &i);
+					i = b - buf;
+					unsigned long long val;
+					if (big == 2) {
+						val = (unsigned long long)va_arg(args, unsigned long long);
+					} else if (big == 1) {
+						val = (unsigned long)va_arg(args, unsigned long);
+					} else {
+						val = (unsigned int)va_arg(args, unsigned int);
+					}
+					print_hex(val, arg_width, buf, &i);
+					b = buf + i;
 				}
-				b = buf + i;
 				break;
 			case 'i':
 			case 'd': /* Decimal number */
-#ifndef EFI_PLATFORM
-			case 'g': /* supposed to also support e */
-			case 'f':
-#endif
 				{
 					long long val;
 					if (big == 2) {
 						val = (long long)va_arg(args, long long);
-					} else {
+					} else if (big == 1) {
 						val = (long)va_arg(args, long);
+					} else {
+						val = (int)va_arg(args, int);
 					}
 					if (val < 0) {
 						*b++ = '-';
@@ -560,14 +510,15 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 					unsigned long long val;
 					if (big == 2) {
 						val = (unsigned long long)va_arg(args, unsigned long long);
-					} else {
+					} else if (big == 1) {
 						val = (unsigned long)va_arg(args, unsigned long);
+					} else {
+						val = (unsigned int)va_arg(args, unsigned int);
 					}
 					print_dec(val, arg_width, buf, &i, fill_zero, align, precision);
 				}
 				b = buf + i;
 				break;
-#ifdef EFI_PLATFORM
 			case 'g': /* supposed to also support e */
 			case 'f':
 				{
@@ -591,7 +542,6 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 					b = buf + i;
 				}
 				break;
-#endif
 			case '%': /* Escape */
 				*b++ = '%';
 				break;

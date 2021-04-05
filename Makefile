@@ -11,7 +11,7 @@ OBJ = $(patsubst %.c,%.o,$(sort $(SRC)))
 CFLAGS = -DSTATIC_ONLY -DSTRICTLY_NO_THREADS -DNDEBUG -DKRK_ENABLE_DEBUG \
          -ffreestanding -Isrc/ -Ikuroko/src/ -nostdinc -Iinclude -fno-stack-protector -fpic \
          -DEFI_PLATFORM -fshort-wchar -I/usr/include/efi -mno-red-zone \
-         -I/usr/include/efi/x86_64 -DEFI_FUNCTION_WRAPPER
+         -I/usr/include/efi/x86_64 -DEFI_FUNCTION_WRAPPER -O2 -s
 
 SECTIONS = -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel -j .rela -j .reloc
 
