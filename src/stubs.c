@@ -9,7 +9,6 @@
 #include <stdlib.h>
 
 extern void print_(char * str);
-extern void print_hex_(unsigned int value);
 
 void abort(void) {print_("ABORT\n"); while(1); }
 void exit(int status) {print_("EXIT\n"); while(1); }
@@ -648,8 +647,6 @@ char * strdup(const char * src) {
 	*c = 0;
 	return out;
 }
-
-extern void set_attr(int _attr);
 
 char *strstr(const char *haystack, const char *needle) {
 	size_t s = strlen(needle);

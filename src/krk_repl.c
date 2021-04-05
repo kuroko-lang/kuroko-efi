@@ -9,11 +9,25 @@
 #include <kuroko/compiler.h>
 #include <kuroko/util.h>
 #include "rline.h"
+#include "text.h"
 
 #define PROMPT_MAIN  ">>> "
 #define PROMPT_BLOCK "  > "
 
-extern void krk_printResult(unsigned long long val);
+void krk_printResult(KrkValue result) {
+	if (IS_NONE(result)) return;
+	KrkClass * type = krk_getType(result);
+	if (type->_reprer) {
+		krk_push(result);
+		result = krk_callSimple(OBJECT_VAL(type->_reprer), 1, 0);
+		if (IS_STRING(result)) {
+			set_attr(0x7);
+			printf(" => ");
+			puts(AS_CSTRING(result));
+			set_attr(0xf);
+		}
+	}
+}
 
 static int exitRepl = 0;
 

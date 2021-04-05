@@ -4,7 +4,6 @@
 #include <string.h>
 #include <stdio.h>
 #include "text.h"
-#include "kbd.h"
 
 #include <kuroko/kuroko.h>
 #include <kuroko/vm.h>
