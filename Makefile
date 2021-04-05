@@ -31,10 +31,10 @@ stage/disk.img: kuroko.efi Makefile | stage
 	-rm -f $@
 	fallocate -l 4M $@
 	mkfs.fat $@
-	mmd -i $@ efi efi/boot krk krk/test
+	mmd -i $@ efi efi/boot krk test
 	mcopy -i $@ kuroko.efi ::efi/boot/bootx64.efi
 	mcopy -i $@ krk/*.krk ::krk/
-	mcopy -i $@ krk/test/* ::krk/test/
+	mcopy -i $@ test/* ::test/
 
 cdimage.iso: stage/disk.img
 	xorriso -as mkisofs -c bootcat -e disk.img -no-emul-boot -isohybrid-gpt-basdat -o $@ stage

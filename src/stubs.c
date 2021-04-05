@@ -321,6 +321,19 @@ static void print_dec(unsigned long long value, unsigned int width, char * buf, 
 	}
 }
 
+double frexp(double d, int *exp) {
+	double a;
+	uint64_t in;
+	memcpy(&in, &d, sizeof(double));
+
+	uint64_t out =  in & 0x800fffffffffffffUL;
+	int64_t ex2 = ((in & 0x7ff0000000000000UL) >> 52) - 0x3FE;
+	out |= 0x3fe0000000000000UL;
+	memcpy(&a, &out, sizeof(uint64_t));
+	*exp = ex2;
+	return a;
+}
+
 /*
  * Hexadecimal to string
  */
@@ -524,20 +537,56 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 				{
 					if (precision == -1) precision = 8;
 					double val = (double)va_arg(args, double);
-					if (val < 0) {
+					uint64_t asBits;
+					memcpy(&asBits,&val,sizeof(double));
+#define SIGNBIT(d) (d & 0x8000000000000000UL)
+
+					/* Extract exponent */
+					int64_t exponent = (asBits & 0x7ff0000000000000UL) >> 52;
+
+					/* Fraction part */
+					uint64_t fraction = (asBits & 0x000fffffffffffffUL);
+
+					if (exponent == 0x7ff) {
+						if (!fraction) {
+							if (SIGNBIT(asBits)) {
+								*b++ = '-';
+							}
+							*b++ = 'i';
+							*b++ = 'n';
+							*b++ = 'f';
+						} else {
+							*b++ = 'n';
+							*b++ = 'a';
+							*b++ = 'n';
+						}
+						break;
+					} else if (exponent == 0 && fraction == 0) {
+						if (SIGNBIT(asBits)) {
+							*b++ = '-';
+						}
+						*b++ = '0';
+						break;
+					}
+
+					/* Okay, now we can do some real work... */
+
+					int isNegative = SIGNBIT(asBits);
+					if (isNegative) {
 						*b++ = '-';
 						val = -val;
 					}
+
 					i = b - buf;
-					print_dec((long)val, arg_width, buf, &i, fill_zero, align, 1);
+					print_dec((unsigned long long)val, arg_width, buf, &i, fill_zero, align, 1);
 					b = buf + i;
 					*b++ = '.';
 					i = b - buf;
-					for (int j = 0; j < ((precision > -1 && precision < 8) ? precision : 8); ++j) {
-						if ((int)(val * 100000.0) % 100000 == 0 && j != 0) break;
-						val = val - (int)val;
+					for (unsigned long long j = 0; j < ((precision > -1 && precision < 8) ? precision : 8); ++j) {
+						if ((unsigned long long)(val * 100000.0) % 100000 == 0 && j != 0) break;
+						val = val - (unsigned long long)val;
 						val *= 10.0;
-						print_dec((int)(val) % 10, 0, buf, &i, 0, 0, 1);
+						print_dec((unsigned long long)(val) % 10, 0, buf, &i, 0, 0, 1);
 					}
 					b = buf + i;
 				}

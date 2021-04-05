@@ -41,7 +41,7 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		"if True:\n"
 		" import kuroko\n"
 		" print(f'Kuroko {kuroko.version} ({kuroko.builddate}) with {kuroko.buildenv}')\n"
-		" kuroko.module_paths = ['/krk/']\n", "<stdin>");
+		" kuroko.module_paths = ['/krk/','/']\n", "<stdin>");
 	puts("Type `license` for copyright, `exit()` to return to menu.");
 
 	krk_repl();
