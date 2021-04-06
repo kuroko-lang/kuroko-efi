@@ -268,7 +268,22 @@ int puts(const char * s) {
 	return 0;
 }
 
-static void print_dec(unsigned long long value, unsigned int width, char * buf, int * ptr, int fill_zero, int align_right, int precision) {
+double frexp(double d, int *exp) {
+	double a;
+	uint64_t in;
+	memcpy(&in, &d, sizeof(double));
+
+	uint64_t out =  in & 0x800fffffffffffffUL;
+	int64_t ex2 = ((in & 0x7ff0000000000000UL) >> 52) - 0x3FE;
+	out |= 0x3fe0000000000000UL;
+	memcpy(&a, &out, sizeof(uint64_t));
+	*exp = ex2;
+	return a;
+}
+
+#define OUT(c) do { callback(userData, (c)); written++; } while (0)
+static size_t print_dec(unsigned long long value, unsigned int width, int (*callback)(void*,char), void * userData, int fill_zero, int align_right, int precision) {
+	size_t written = 0;
 	unsigned long long n_width = 1;
 	unsigned long long i = 9;
 	if (precision == -1) precision = 1;
@@ -288,56 +303,52 @@ static void print_dec(unsigned long long value, unsigned int width, char * buf, 
 	int printed = 0;
 	if (align_right) {
 		while (n_width + printed < width) {
-			buf[*ptr] = fill_zero ? '0' : ' ';
-			*ptr += 1;
+			OUT(fill_zero ? '0' : ' ');
 			printed += 1;
 		}
 
 		i = n_width;
+		char tmp[100];
 		while (i > 0) {
 			unsigned long long n = value / 10;
 			long long r = value % 10;
-			buf[*ptr + i - 1] = r + '0';
+			tmp[i - 1] = r + '0';
 			i--;
 			value = n;
 		}
-		*ptr += n_width;
+		while (i < n_width) {
+			OUT(tmp[i]);
+			i++;
+		}
 	} else {
 		i = n_width;
+		char tmp[100];
 		while (i > 0) {
 			unsigned long long n = value / 10;
 			long long r = value % 10;
-			buf[*ptr + i - 1] = r + '0';
+			tmp[i - 1] = r + '0';
 			i--;
 			value = n;
 			printed++;
 		}
-		*ptr += n_width;
+		while (i < n_width) {
+			OUT(tmp[i]);
+			i++;
+		}
 		while (printed < (long long)width) {
-			buf[*ptr] = fill_zero ? '0' : ' ';
-			*ptr += 1;
+			OUT(fill_zero ? '0' : ' ');
 			printed += 1;
 		}
 	}
-}
 
-double frexp(double d, int *exp) {
-	double a;
-	uint64_t in;
-	memcpy(&in, &d, sizeof(double));
-
-	uint64_t out =  in & 0x800fffffffffffffUL;
-	int64_t ex2 = ((in & 0x7ff0000000000000UL) >> 52) - 0x3FE;
-	out |= 0x3fe0000000000000UL;
-	memcpy(&a, &out, sizeof(uint64_t));
-	*exp = ex2;
-	return a;
+	return written;
 }
 
 /*
  * Hexadecimal to string
  */
-static void print_hex(unsigned long long value, unsigned int width, char * buf, int * ptr) {
+static size_t print_hex(unsigned long long value, unsigned int width, int (*callback)(void*,char), void* userData) {
+	size_t written = 0;
 	int i = width;
 
 	if (i == 0) i = 8;
@@ -351,29 +362,29 @@ static void print_hex(unsigned long long value, unsigned int width, char * buf, 
 	}
 
 	while (i > (long long)n_width) {
-		buf[*ptr] = '0';
-		*ptr += 1;
+		OUT('0');
 		i--;
 	}
 
 	i = (long long)n_width;
 	while (i-- > 0) {
-		buf[*ptr] = "0123456789abcdef"[(value>>(i*4))&0xF];
-		*ptr += + 1;
+		char c = "0123456789abcdef"[(value>>(i*4))&0xF];
+		OUT(c);
 	}
+
+	return written;
 }
 
 /*
  * vasprintf()
  */
-int xvasprintf(char * buf, const char * fmt, va_list args) {
-	int i = 0;
+size_t xvasprintf(int (*callback)(void *, char), void * userData, const char * fmt, va_list args) {
 	char * s;
-	char * b = buf;
 	int precision = -1;
+	size_t written = 0;
 	for (const char *f = fmt; *f; f++) {
 		if (*f != '%') {
-			*b++ = *f;
+			OUT(*f);
 			continue;
 		}
 		++f;
@@ -440,7 +451,7 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 				{
 					size_t count = 0;
 					if (big) {
-						return -1;
+						return written;
 					} else {
 						s = (char *)va_arg(args, char *);
 						if (s == NULL) {
@@ -448,27 +459,27 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 						}
 						if (precision >= 0) {
 							while (*s && precision > 0) {
-								*b++ = *s++;
+								OUT(*s++);
 								count++;
 								precision--;
 								if (arg_width && count == arg_width) break;
 							}
 						} else {
 							while (*s) {
-								*b++ = *s++;
+								OUT(*s++);
 								count++;
 								if (arg_width && count == arg_width) break;
 							}
 						}
 					}
 					while (count < arg_width) {
-						*b++ = ' ';
+						OUT(' ');
 						count++;
 					}
 				}
 				break;
 			case 'c': /* Single character */
-				*b++ = (char)va_arg(args, int);
+				OUT((char)va_arg(args,int));
 				break;
 			case 'p':
 				if (!arg_width) {
@@ -479,10 +490,9 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 			case 'x': /* Hexadecimal number */
 				{
 					if (alt) {
-						*b++ = '0';
-						*b++ = 'x';
+						OUT('0');
+						OUT('x');
 					}
-					i = b - buf;
 					unsigned long long val;
 					if (big == 2) {
 						val = (unsigned long long)va_arg(args, unsigned long long);
@@ -491,8 +501,7 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 					} else {
 						val = (unsigned int)va_arg(args, unsigned int);
 					}
-					print_hex(val, arg_width, buf, &i);
-					b = buf + i;
+					written += print_hex(val, arg_width, callback, userData);
 				}
 				break;
 			case 'i':
@@ -507,18 +516,15 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 						val = (int)va_arg(args, int);
 					}
 					if (val < 0) {
-						*b++ = '-';
+						OUT('-');
 						val = -val;
 					} else if (always_sign) {
-						*b++ = '+';
+						OUT('+');
 					}
-					i = b - buf;
-					print_dec(val, arg_width, buf, &i, fill_zero, align, precision);
-					b = buf + i;
+					written += print_dec(val, arg_width, callback, userData, fill_zero, align, precision);
 				}
 				break;
 			case 'u': /* Unsigned ecimal number */
-				i = b - buf;
 				{
 					unsigned long long val;
 					if (big == 2) {
@@ -528,9 +534,8 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 					} else {
 						val = (unsigned int)va_arg(args, unsigned int);
 					}
-					print_dec(val, arg_width, buf, &i, fill_zero, align, precision);
+					written += print_dec(val, arg_width, callback, userData, fill_zero, align, precision);
 				}
-				b = buf + i;
 				break;
 			case 'g': /* supposed to also support e */
 			case 'f':
@@ -550,22 +555,22 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 					if (exponent == 0x7ff) {
 						if (!fraction) {
 							if (SIGNBIT(asBits)) {
-								*b++ = '-';
+								OUT('-');
 							}
-							*b++ = 'i';
-							*b++ = 'n';
-							*b++ = 'f';
+							OUT('i');
+							OUT('n');
+							OUT('f');
 						} else {
-							*b++ = 'n';
-							*b++ = 'a';
-							*b++ = 'n';
+							OUT('n');
+							OUT('a');
+							OUT('n');
 						}
 						break;
 					} else if (exponent == 0 && fraction == 0) {
 						if (SIGNBIT(asBits)) {
-							*b++ = '-';
+							OUT('-');
 						}
-						*b++ = '0';
+						OUT('0');
 						break;
 					}
 
@@ -573,62 +578,80 @@ int xvasprintf(char * buf, const char * fmt, va_list args) {
 
 					int isNegative = !!SIGNBIT(asBits);
 					if (isNegative) {
-						*b++ = '-';
+						OUT('-');
 						val = -val;
 					}
 
-					i = b - buf;
-					print_dec((unsigned long long)val, arg_width, buf, &i, fill_zero, align, 1);
-					b = buf + i;
-					*b++ = '.';
-					i = b - buf;
+					written += print_dec((unsigned long long)val, arg_width, callback, userData, fill_zero, align, 1);
+					OUT('.');
 					for (unsigned long long j = 0; j < ((precision > -1 && precision < 16) ? precision : 16); ++j) {
 						if ((unsigned long long)(val * 100000.0) % 100000 == 0 && j != 0) break;
 						val = val - (unsigned long long)val;
 						val *= 10.0;
 						double roundy = ((double)(val - (unsigned long long)val) - 0.99999);
 						if (roundy < 0.00001 && roundy > -0.00001) {
-							print_dec((unsigned long long)(val) % 10 + 1, 0, buf, &i, 0, 0, 1);
+							written += print_dec((unsigned long long)(val) % 10 + 1, 0, callback, userData, 0, 0, 1);
 							break;
 						}
-						print_dec((unsigned long long)(val) % 10, 0, buf, &i, 0, 0, 1);
+						written += print_dec((unsigned long long)(val) % 10, 0, callback, userData, 0, 0, 1);
 					}
-					b = buf + i;
 				}
 				break;
 			case '%': /* Escape */
-				*b++ = '%';
+				OUT('%');
 				break;
 			default: /* Nothing at all, just dump it */
-				*b++ = *f;
+				OUT(*f);
 				break;
 		}
 	}
 	/* Ensure the buffer ends in a null */
-	*b = '\0';
-	return b - buf;
+	callback(userData,'\0');
+	return written;
 }
 
+struct CBData {
+	char * str;
+	size_t size;
+	size_t written;
+};
+
+static int cb_sprintf(void * user, char c) {
+	struct CBData * data = user;
+	if (data->size > data->written + 1) {
+		data->str[data->written] = c;
+		data->written++;
+		if (data->size == data->written + 1) {
+			data->str[data->size-1] = '\0';
+		}
+	}
+	return 0;
+}
 
 int vsnprintf(char *str, size_t size, const char *format, va_list ap) {
-	return xvasprintf(str, format, ap);
+	struct CBData data = {str,size,0};
+	return xvasprintf(cb_sprintf, &data, format, ap);
 }
 
 int snprintf(char * str, size_t size, const char * format, ...) {
 	(void)size;
+	struct CBData data = {str,size,0};
 	va_list args;
 	va_start(args, format);
-	int out = xvasprintf(str, format, args);
+	size_t out = xvasprintf(cb_sprintf, &data, format, args);
 	va_end(args);
 	return out;
 }
 
+static int cb_fprintf(void * user, char c) {
+	fputc(c,(FILE*)user);
+	return 0;
+}
+
 int fprintf(FILE *stream, const char * fmt, ...) {
-	static char str[1024] = {0};
 	va_list args;
 	va_start(args, fmt);
-	int out = xvasprintf(str, fmt, args);
-	fputs(str,stream);
+	int out = xvasprintf(cb_fprintf, stream, fmt, args);
 	va_end(args);
 	return out;
 }

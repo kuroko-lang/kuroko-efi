@@ -5,6 +5,8 @@
 #include <string.h>
 #include <dirent.h>
 
+int errno = 0;
+
 extern EFI_HANDLE ImageHandleIn;
 
 static EFI_GUID efi_simple_file_system_protocol_guid =
@@ -39,6 +41,7 @@ static void initialize(void) {
 
 FILE * fopen(const char * pathname, const char * mode) {
 	if (strcmp(mode,"r")) {
+		errno = 1;
 		fprintf(stderr, "fopen: unsupported mode '%s'\n", mode);
 		return NULL;
 	}
@@ -146,8 +149,6 @@ int stat(const char* fn,struct stat* outbuf) {
 	fclose(f);
 	return 0;
 }
-
-int errno = 0;
 
 char * strerror(int errnum) {
 	if (errnum == 14) return "File not found";
