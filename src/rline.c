@@ -94,7 +94,7 @@ char * rline_history_prev(int item) {
  * Conceptually similar to its predecessor, this implementation is much
  * less cool, as it uses three separate state tables and more shifts.
  */
-static inline uint32_t decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
+uint32_t decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
 	static int state_table[32] = {
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0xxxxxxx */
 		1,1,1,1,1,1,1,1,                 /* 10xxxxxx */
@@ -973,9 +973,9 @@ static void render_line(void) {
 			/* Render special characters */
 			if (c.codepoint == '\t') {
 				set_colors(COLOR_ALT_FG, COLOR_ALT_BG);
-				print_wchar(L'»');
+				print_wchar(L'►');
 				for (int i = 1; i < c.display_width; ++i) {
-					print_wchar(L'·');
+					print_wchar(L'-');
 				}
 				set_colors(last_color ? last_color : COLOR_FG, COLOR_BG);
 			} else if (c.codepoint < 32) {
@@ -1012,7 +1012,7 @@ static void render_line(void) {
 #endif
 			} else if (i > 0 && is_spaces && c.codepoint == ' ' && !(i % 4)) {
 				set_colors(COLOR_ALT_FG, COLOR_BG); /* Normal background so this is more subtle */
-				print_wchar(L'▏');
+				print_wchar(L'│');
 				set_colors(last_color ? last_color : COLOR_FG, COLOR_BG);
 			} else if (c.codepoint < 0xFFFF) {
 				print_wchar(c.codepoint);

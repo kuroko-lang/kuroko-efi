@@ -6,6 +6,8 @@
 
 #include "text.h"
 
+extern uint32_t decode(uint32_t* state, uint32_t* codep, uint32_t byte);
+
 static unsigned short bad_ucs2(int c) {
 	switch (c) {
 		case '\030':
@@ -21,11 +23,17 @@ static unsigned short bad_ucs2(int c) {
 	}
 }
 
-void print_(char * str) {
+static uint32_t istate = 0, c = 0;
+void print_(unsigned char * str) {
 	while (*str) {
-		if (*str == '\n') print_("\r");
-		uint16_t string[] = {bad_ucs2(*str), 0};
-		uefi_call_wrapper(ST->ConOut->OutputString, 2, ST->ConOut, string);
+		if (!decode(&istate, &c, *str)) {
+			if (c == '\n') {
+				uint16_t string[] = {'\r', 0};
+				uefi_call_wrapper(ST->ConOut->OutputString, 2, ST->ConOut, string);
+			}
+			uint16_t string[] = {c, 0};
+			uefi_call_wrapper(ST->ConOut->OutputString, 2, ST->ConOut, string);
+		}
 		str++;
 	}
 }
