@@ -38,3 +38,10 @@ void * sbrk(size_t bytes) {
 	return out;
 }
 
+void free_sbrk_heap(void) {
+	if (base) {
+		EFI_PHYSICAL_ADDRESS allocSpace = (uint64_t)(uintptr_t)base;
+		size_t pages = (endp - base) / 0x1000;
+		uefi_call_wrapper(ST->BootServices->FreePages, 2, allocSpace, pages);
+	}
+}

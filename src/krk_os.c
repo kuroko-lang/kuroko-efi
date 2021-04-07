@@ -41,10 +41,11 @@ KRK_FUNC(uname,{
 })
 
 extern EFI_HANDLE ImageHandleIn;
+extern void free_sbrk_heap(void);
 
 KRK_FUNC(exit,{
+	free_sbrk_heap();
 	uefi_call_wrapper(ST->BootServices->Exit, 4, ImageHandleIn, EFI_SUCCESS, 0, NULL);
-
 })
 
 void _createAndBind_osMod(void) {

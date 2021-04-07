@@ -13,6 +13,7 @@ EFI_HANDLE ImageHandleIn;
 
 extern void krk_printResult(unsigned long long val);
 extern int krk_repl(void);
+extern void free_sbrk_heap(void);
 
 EFI_STATUS
 	EFIAPI
@@ -45,6 +46,8 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	puts("Type `license` for copyright, `exit()` to return to menu.");
 
 	krk_repl();
+
+	free_sbrk_heap();
 
 	return 0;
 }
