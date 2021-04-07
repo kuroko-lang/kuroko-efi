@@ -1,0 +1,15 @@
+import gc
+import fileio
+import kuroko
+
+let tests = []
+with fileio.opendir('test') as directory:
+    tests = [file['name'].replace('.krk','') for file in directory if file['name'].endswith('.krk')]
+
+for test in tests:
+    try:
+        print('Running',test)
+        kuroko.importmodule(f'test/{test}')
+        gc.collect()
+    except Exception as e:
+        print(test,'raised',e)
