@@ -605,8 +605,6 @@ size_t xvasprintf(int (*callback)(void *, char), void * userData, const char * f
 				break;
 		}
 	}
-	/* Ensure the buffer ends in a null */
-	callback(userData,'\0');
 	return written;
 }
 
@@ -621,8 +619,8 @@ static int cb_sprintf(void * user, char c) {
 	if (data->size > data->written + 1) {
 		data->str[data->written] = c;
 		data->written++;
-		if (data->size == data->written + 1) {
-			data->str[data->size-1] = '\0';
+		if (data->written < data->size) {
+			data->str[data->written] = '\0';
 		}
 	}
 	return 0;
@@ -630,16 +628,18 @@ static int cb_sprintf(void * user, char c) {
 
 int vsnprintf(char *str, size_t size, const char *format, va_list ap) {
 	struct CBData data = {str,size,0};
-	return xvasprintf(cb_sprintf, &data, format, ap);
+	int out = xvasprintf(cb_sprintf, &data, format, ap);
+	cb_sprintf(&data, '\0');
+	return out;
 }
 
 int snprintf(char * str, size_t size, const char * format, ...) {
-	(void)size;
 	struct CBData data = {str,size,0};
 	va_list args;
 	va_start(args, format);
-	size_t out = xvasprintf(cb_sprintf, &data, format, args);
+	int out = xvasprintf(cb_sprintf, &data, format, args);
 	va_end(args);
+	cb_sprintf(&data, '\0');
 	return out;
 }
 
