@@ -6,6 +6,8 @@ let tests = []
 with fileio.opendir('test') as directory:
     tests = [file['name'].replace('.krk','') for file in directory if file['name'].endswith('.krk')]
 
+let fails = []
+
 for test in tests:
     try:
         print('Running',test)
@@ -13,3 +15,7 @@ for test in tests:
         gc.collect()
     except Exception as e:
         print(test,'raised',e)
+        fails.append(test)
+
+print("Ran",len(tests),"tests")
+print(len(fails),"failures")

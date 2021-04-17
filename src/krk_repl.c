@@ -19,7 +19,7 @@ void krk_printResult(KrkValue result) {
 	KrkClass * type = krk_getType(result);
 	if (type->_reprer) {
 		krk_push(result);
-		result = krk_callSimple(OBJECT_VAL(type->_reprer), 1, 0);
+		result = krk_callDirect(type->_reprer, 1);
 		if (IS_STRING(result)) {
 			set_attr(0x7);
 			printf(" => ");
@@ -309,11 +309,13 @@ static int debuggerHook(KrkCallFrame * frame) {
 					/* Turn our compiled expression into a callable. */
 					krk_push(OBJECT_VAL(expression));
 					krk_push(OBJECT_VAL(krk_newClosure(expression)));
+					krk_swap(1);
+					krk_pop();
 					/* Stack silliness, don't ask. */
 					krk_push(NONE_VAL());
 					krk_pop();
 					/* Call the compiled expression with no args, but claim 2 method extras. */
-					krk_push(krk_callSimple(krk_peek(0), 0, 2));
+					krk_push(krk_callStack(0));
 					fprintf(stderr, "\033[1;30m=> ");
 					krk_printValue(stderr, krk_peek(0));
 					fprintf(stderr, "\033[0m\n");
