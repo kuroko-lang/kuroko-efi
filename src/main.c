@@ -15,6 +15,7 @@ extern void krk_printResult(unsigned long long val);
 extern int krk_repl(void);
 extern void free_sbrk_heap(void);
 extern void krkefi_load_module(void);
+extern void _createAndBind_gzipMod(void);
 
 EFI_STATUS
 	EFIAPI
@@ -39,6 +40,7 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	krk_initVM(0);
 
 	krkefi_load_module();
+	_createAndBind_gzipMod();
 
 	krk_startModule("__main__");
 	krk_interpret(
