@@ -67,7 +67,7 @@ KRK_FUNC(time,{
 		(now_efi.Hour) * 3600.0 +
 		(now_efi.Minute) * 60.0 +
 		(double)(now_efi.Second) +
-		((double)now_efi.Nanosecond / 100000000.0);
+		((double)now_efi.Nanosecond / 1000000000.0);
 
 	return FLOATING_VAL(now);
 })
