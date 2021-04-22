@@ -275,10 +275,6 @@ static void decode_huffman(void) {
 		16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
 	};
 
-#ifdef _BOOT_LOADER
-	print_("<");
-#endif
-
 	unsigned int literals, distances, clengths;
 	uint8_t lengths[320] = {0};
 
@@ -333,9 +329,6 @@ static void decode_huffman(void) {
 	struct huff huff_dist;
 	build_huffman(lengths + literals, distances, &huff_dist);
 
-#ifdef _BOOT_LOADER
-	print_(">");
-#endif
 	inflate(&huff_len, &huff_dist);
 }
 
@@ -378,9 +371,6 @@ int deflate_decompress(void) {
 	bit_buffer = 0;
 	buffer_size = 0;
 
-#ifdef _BOOT_LOADER
-	print_("Building fixed huffman table...\n");
-#endif
 	build_fixed();
 
 	/* read compressed data */
@@ -392,27 +382,15 @@ int deflate_decompress(void) {
 
 		switch (type) {
 			case 0x00: /* BTYPE=00 Non-compressed blocks */
-#ifdef _BOOT_LOADER
-				print_("V");
-#endif
 				uncompressed();
 				break;
 			case 0x01: /* BYTPE=01 Compressed with fixed Huffman codes */
-#ifdef _BOOT_LOADER
-				print_("F");
-#endif
 				inflate(&fixed_lengths, &fixed_dists);
 				break;
 			case 0x02: /* BTYPE=02 Compression with dynamic Huffman codes */
-#ifdef _BOOT_LOADER
-				print_("D");
-#endif
 				decode_huffman();
 				break;
 			case 0x03:
-#ifdef _BOOT_LOADER
-				print_("B");
-#endif
 				return 1;
 			default:
 				__builtin_unreachable();
