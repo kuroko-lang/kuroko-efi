@@ -14,6 +14,7 @@ EFI_HANDLE ImageHandleIn;
 extern void krk_printResult(unsigned long long val);
 extern int krk_repl(void);
 extern void free_sbrk_heap(void);
+extern void krkefi_load_module(void);
 
 EFI_STATUS
 	EFIAPI
@@ -36,6 +37,8 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	 */
 	set_attr(0xF);
 	krk_initVM(0);
+
+	krkefi_load_module();
 
 	krk_startModule("__main__");
 	krk_interpret(
