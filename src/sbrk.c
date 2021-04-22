@@ -10,6 +10,8 @@ static char * base = NULL;
 static char * endp = NULL;
 static char * curr = NULL;
 
+size_t sbrkHeapSize = 0;
+
 void * sbrk(size_t bytes) {
 	if (!base) {
 		EFI_PHYSICAL_ADDRESS allocSpace;
@@ -19,11 +21,16 @@ void * sbrk(size_t bytes) {
 			if (!EFI_ERROR(status)) {
 				break;
 			}
-			tryPages >> 1;
+			tryPages >>= 1;
+			if (tryPages == 0) {
+				printf("Unable to obtain space for a heap, giving up.");
+				while (1);
+			}
 		}
 		base = (char *)(intptr_t)allocSpace;
 		endp = base + tryPages * 0x1000;
 		curr = base;
+		sbrkHeapSize = endp - base;
 	}
 
 	if (curr + bytes >= endp) {
