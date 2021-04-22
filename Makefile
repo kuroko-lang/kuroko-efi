@@ -42,3 +42,8 @@ cdimage.iso: stage/disk.img
 .PHONY: clean
 clean:
 	-rm -rf src/*.o *.efi *.so kuroko/src/*.o *.iso stage/disk.img
+
+.PHONY: run
+
+run: cdimage.iso
+	qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -cdrom $< -enable-kvm -net none -m 1G
