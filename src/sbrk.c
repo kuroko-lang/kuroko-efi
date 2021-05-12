@@ -1,8 +1,9 @@
 #include <efi.h>
-#include <efilib.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
+
+extern EFI_SYSTEM_TABLE *ST;
 
 #define MAX_PAGES 128000
 
@@ -17,7 +18,7 @@ void * sbrk(size_t bytes) {
 		EFI_PHYSICAL_ADDRESS allocSpace;
 		size_t tryPages = MAX_PAGES;
 		for (;;) {
-			EFI_STATUS status = uefi_call_wrapper(ST->BootServices->AllocatePages, 4, AllocateAnyPages, EfiLoaderData, tryPages, &allocSpace);
+			EFI_STATUS status = ST->BootServices->AllocatePages(AllocateAnyPages, EfiLoaderData, tryPages, &allocSpace);
 			if (!EFI_ERROR(status)) {
 				break;
 			}
@@ -49,6 +50,6 @@ void free_sbrk_heap(void) {
 	if (base) {
 		EFI_PHYSICAL_ADDRESS allocSpace = (uint64_t)(uintptr_t)base;
 		size_t pages = (endp - base) / 0x1000;
-		uefi_call_wrapper(ST->BootServices->FreePages, 2, allocSpace, pages);
+		ST->BootServices->FreePages(allocSpace, pages);
 	}
 }

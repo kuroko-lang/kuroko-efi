@@ -1,5 +1,4 @@
 #include <efi.h>
-#include <efilib.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -10,6 +9,7 @@
 #include <kuroko/util.h>
 
 EFI_HANDLE ImageHandleIn;
+EFI_SYSTEM_TABLE *ST;
 
 extern void krk_printResult(unsigned long long val);
 extern int krk_repl(void);
@@ -21,17 +21,13 @@ EFI_STATUS
 	EFIAPI
 efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 {
-	/*
-	 * Initialize GNU-EFI
-	 */
-	InitializeLib(ImageHandle, SystemTable);
 	ST = SystemTable;
 	ImageHandleIn = ImageHandle;
 
 	/*
 	 * Disable watchdog
 	 */
-	uefi_call_wrapper(ST->BootServices->SetWatchdogTimer, 4, 0, 0, 0, NULL);
+	ST->BootServices->SetWatchdogTimer(0, 0, 0, NULL);
 
 	/*
 	 * Start shell

@@ -1,9 +1,10 @@
 #include <efi.h>
-#include <efilib.h>
 #include <stdio.h>
 #include <kuroko/vm.h>
 #include <kuroko/object.h>
 #include <kuroko/util.h>
+
+extern EFI_SYSTEM_TABLE *ST;
 
 uint32_t secs_of_years(int years) {
 	uint32_t days = 0;
@@ -59,7 +60,7 @@ uint32_t secs_of_month(int months, int year) {
 
 KRK_FUNC(time,{
 	EFI_TIME now_efi;
-	uefi_call_wrapper(ST->RuntimeServices->GetTime, 2, &now_efi, NULL);
+	ST->RuntimeServices->GetTime(&now_efi, NULL);
 	double now =
 		(double)secs_of_years(now_efi.Year-1) +
 		(double)secs_of_month(now_efi.Month-1,now_efi.Year) +
@@ -82,7 +83,7 @@ KRK_FUNC(sleep,{
 	                 (IS_FLOATING(argv[0]) ? AS_FLOATING(argv[0]) : 0)) *
 	                 1000000;
 
-	uefi_call_wrapper(ST->BootServices->Stall, 1, usecs);
+	ST->BootServices->Stall(usecs);
 
 })
 

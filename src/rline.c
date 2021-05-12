@@ -1,11 +1,12 @@
 #include <efi.h>
-#include <efilib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include "wcwidth._h"
 #include "rline.h"
+
+extern EFI_SYSTEM_TABLE *ST;
 
 extern void print_wchar(int wch);
 extern void set_attr(int);
@@ -228,9 +229,9 @@ int rline_exp_set_tab_complete_func(rline_callback_t func) {
 
 static int getch(int *scancodeOut) {
 	EFI_INPUT_KEY Key;
-	unsigned long int index;
-	uefi_call_wrapper(ST->BootServices->WaitForEvent, 3, 1, &ST->ConIn->WaitForKey, &index);
-	uefi_call_wrapper(ST->ConIn->ReadKeyStroke, 2, ST->ConIn, &Key);
+	UINTN index;
+	ST->BootServices->WaitForEvent(1, &ST->ConIn->WaitForKey, &index);
+	ST->ConIn->ReadKeyStroke(ST->ConIn, &Key);
 
 	if (Key.ScanCode == 0) return Key.UnicodeChar;
 	*scancodeOut = Key.ScanCode;
@@ -869,7 +870,7 @@ void rline_set_colors(rline_style_t style) {
  * alterations and removal of selection support.
  */
 static void render_line(void) {
-	uefi_call_wrapper(ST->ConOut->EnableCursor, 2, ST->ConOut, 0);
+	ST->ConOut->EnableCursor(ST->ConOut, 0);
 	set_colors(COLOR_ALT_FG, COLOR_ALT_BG);
 	set_attr(0x0f);
 	printf("\r%s", prompt, the_line->actual);
@@ -1101,7 +1102,7 @@ static void get_size(void) {
 
 	UINTN w, h;
 
-	uefi_call_wrapper(ST->ConOut->QueryMode, 4, ST->ConOut, ST->ConOut->Mode->Mode, &w, &h);
+	ST->ConOut->QueryMode(ST->ConOut, ST->ConOut->Mode->Mode, &w, &h);
 	rline_terminal_width = w;
 	width = w;
 }
@@ -1133,7 +1134,7 @@ void rline_place_cursor(void) {
 	}
 
 	move_cursor_x(x-1);
-	uefi_call_wrapper(ST->ConOut->EnableCursor, 2, ST->ConOut, 1);
+	ST->ConOut->EnableCursor(ST->ConOut, 1);
 }
 
 /**
@@ -1721,7 +1722,7 @@ int rline(char * buffer, int buf_size) {
 
 	set_buffered();
 
-	uefi_call_wrapper(ST->ConOut->EnableCursor, 2, ST->ConOut, 1);
+	ST->ConOut->EnableCursor(ST->ConOut, 1);
 	return strlen(buffer);
 }
 

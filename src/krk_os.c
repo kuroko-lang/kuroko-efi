@@ -1,9 +1,10 @@
 #include <efi.h>
-#include <efilib.h>
 #include <stdio.h>
 #include <kuroko/vm.h>
 #include <kuroko/object.h>
 #include <kuroko/util.h>
+
+extern EFI_SYSTEM_TABLE *ST;
 
 KRK_FUNC(uname,{
 	KrkValue result = krk_dict_of(0, NULL, 0);
@@ -45,7 +46,7 @@ extern void free_sbrk_heap(void);
 
 KRK_FUNC(exit,{
 	free_sbrk_heap();
-	uefi_call_wrapper(ST->BootServices->Exit, 4, ImageHandleIn, EFI_SUCCESS, 0, NULL);
+	ST->BootServices->Exit(ImageHandleIn, EFI_SUCCESS, 0, NULL);
 })
 
 void _createAndBind_osMod(void) {

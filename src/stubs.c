@@ -730,3 +730,20 @@ char * strcat(char *dest, const char *src) {
 	*end = '\0';
 	return dest;
 }
+
+void ___chkstk_ms(void) { }
+
+void * memcpy(void * restrict dest, const void * restrict src, size_t n) {
+	asm volatile("rep movsb"
+	            : : "D"(dest), "S"(src), "c"(n)
+	            : "flags", "memory");
+	return dest;
+}
+
+void * memset(void * dest, int c, size_t n) {
+	size_t i = 0;
+	for ( ; i < n; ++i ) {
+		((char *)dest)[i] = c;
+	}
+	return dest;
+}

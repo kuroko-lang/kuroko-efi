@@ -4,7 +4,6 @@
  * @author K. Lange <klange@toaruos.org>
  */
 #include <efi.h>
-#include <efilib.h>
 #include <stdio.h>
 #include <kuroko/vm.h>
 #include <kuroko/object.h>

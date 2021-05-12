@@ -1,5 +1,7 @@
 all: cdimage.iso
 
+CC=x86_64-w64-mingw32-gcc
+
 KUROKO_CS = builtins.c chunk.c compiler.c debug.c exceptions.c fileio.c memory.c \
             obj_base.c obj_bytes.c obj_dict.c object.c obj_function.c obj_gen.c \
             obj_list.c obj_numeric.c obj_range.c obj_set.c obj_str.c obj_tuple.c \
@@ -8,21 +10,15 @@ KUROKO_CS = builtins.c chunk.c compiler.c debug.c exceptions.c fileio.c memory.c
 SRC = $(patsubst %,kuroko/src/%,${KUROKO_CS}) $(wildcard src/*.c)
 OBJ = $(patsubst %.c,%.o,$(sort $(SRC)))
 
-CFLAGS = -DSTATIC_ONLY -DKRK_DISABLE_THREADS -DNDEBUG \
-         -ffreestanding -Isrc/ -Ikuroko/src/ -nostdinc -Iinclude -fno-stack-protector -fpic \
-         -DEFI_PLATFORM -fshort-wchar -I/usr/include/efi -mno-red-zone \
-         -I/usr/include/efi/x86_64 -DEFI_FUNCTION_WRAPPER -O2 -g
-
-SECTIONS = -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel -j .rela -j .reloc
+CFLAGS = -m64 -ffreestanding -D__efi -DSTATIC_ONLY -DKRK_DISABLE_THREADS -DNDEBUG -DEFI_PLATFORM \
+         -Isrc/ -Ikuroko/src/ -nostdinc -Iinclude -I/usr/include/efi -I/usr/include/efi/x86_64 -O2 -U_WIN32
+LDFLAGS = -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-kuroko.so: $(OBJ)
-	$(LD) $(OBJ) /usr/lib/crt0-efi-x86_64.o -nostdlib -znocombreloc -T /usr/lib/elf_x86_64_efi.lds -shared -Bsymbolic -L /usr/lib -lefi -lgnuefi -o $@
-
-kuroko.efi: kuroko.so
-	objcopy $(SECTIONS) --target=efi-app-x86_64 $< $@
+kuroko.efi: $(OBJ)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJ)
 
 stage:
 	mkdir -p stage

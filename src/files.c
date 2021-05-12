@@ -1,5 +1,4 @@
 #include <efi.h>
-#include <efilib.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,6 +7,7 @@
 int errno = 0;
 
 extern EFI_HANDLE ImageHandleIn;
+extern EFI_SYSTEM_TABLE *ST;
 
 static EFI_GUID efi_simple_file_system_protocol_guid =
 	{0x0964e5b22,0x6459,0x11d2,0x8e,0x39,0x00,0xa0,0xc9,0x69,0x72,0x3b};
@@ -25,16 +25,9 @@ static void initialize(void) {
 	EFI_LOADED_IMAGE * loaded_image;
 	EFI_STATUS status;
 
-	status = uefi_call_wrapper(ST->BootServices->HandleProtocol,
-			3, ImageHandleIn, &efi_loaded_image_protocol_guid,
-			(void **)&loaded_image);
-
-	status = uefi_call_wrapper(ST->BootServices->HandleProtocol,
-			3, loaded_image->DeviceHandle, &efi_simple_file_system_protocol_guid,
-			(void **)&efi_simple_filesystem);
-
-	status = uefi_call_wrapper(efi_simple_filesystem->OpenVolume,
-			2, efi_simple_filesystem, &root);
+	status = ST->BootServices->HandleProtocol(ImageHandleIn, &efi_loaded_image_protocol_guid, (void**)&loaded_image);
+	status = ST->BootServices->HandleProtocol(loaded_image->DeviceHandle, &efi_simple_file_system_protocol_guid, (void **)&efi_simple_filesystem);
+	status = efi_simple_filesystem->OpenVolume(efi_simple_filesystem, &root);
 
 	_initialized = 1;
 }
@@ -56,7 +49,7 @@ FILE * fopen(const char * pathname, const char * mode) {
 	}
 
 	EFI_FILE * outPtr;
-	EFI_STATUS status = uefi_call_wrapper(root->Open, 5, root, &outPtr, tmp, EFI_FILE_MODE_READ, 0);
+	EFI_STATUS status = root->Open(root, &outPtr, tmp, EFI_FILE_MODE_READ, 0);
 	free(tmp);
 
 	if (EFI_ERROR(status)) {
@@ -70,7 +63,7 @@ FILE * fopen(const char * pathname, const char * mode) {
 int fclose(FILE * stream) {
 	EFI_FILE * s = (EFI_FILE *)stream;
 
-	EFI_STATUS status = uefi_call_wrapper(s->Close, 1, s);
+	EFI_STATUS status = s->Close(s);
 	return status;
 }
 
@@ -80,7 +73,7 @@ int fgetc(FILE * stream) {
 	UINTN dataSize = 1;
 	unsigned char data[1];
 
-	EFI_STATUS status = uefi_call_wrapper(s->Read, 3, s, &dataSize, &data);
+	EFI_STATUS status = s->Read(s, &dataSize, &data);
 	if (EFI_ERROR(status)) {
 		errno = status & 0xFF;
 		return -1;
@@ -101,7 +94,7 @@ int fseek(FILE * stream, long offset, int whence) {
 		realOffset = 0xFFFFFFFFFFFFFFFFUL;
 	}
 
-	EFI_STATUS status = uefi_call_wrapper(s->SetPosition, 2, s, realOffset);
+	EFI_STATUS status = s->SetPosition(s, realOffset);
 	if (EFI_ERROR(status)) return -1;
 	return 0;
 }
@@ -110,7 +103,7 @@ long ftell(FILE * stream) {
 	EFI_FILE * s = (EFI_FILE *)stream;
 	UINT64 position;
 
-	EFI_STATUS status = uefi_call_wrapper(s->GetPosition, 2, s, &position);
+	EFI_STATUS status = s->GetPosition(s, &position);
 	if (EFI_ERROR(status)) return -1;
 
 	return position;
@@ -122,7 +115,7 @@ size_t fread(void * ptr, size_t size, size_t nmemb, FILE * stream) {
 
 	UINTN bufferSize = size * nmemb;
 
-	EFI_STATUS status = uefi_call_wrapper(s->Read, 3, s, &bufferSize, ptr);
+	EFI_STATUS status = s->Read(s, &bufferSize, ptr);
 
 	if (EFI_ERROR(status)) {
 		fprintf(stderr, "fread: read error\n");
