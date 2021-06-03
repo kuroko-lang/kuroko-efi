@@ -23,7 +23,7 @@ kuroko.efi: $(OBJ)
 stage:
 	mkdir -p stage
 
-stage/disk.img: kuroko.efi Makefile | stage
+stage/disk.img: kuroko.efi Makefile krk/*.krk test/* | stage
 	-rm -f $@
 	fallocate -l 4M $@
 	mkfs.fat $@

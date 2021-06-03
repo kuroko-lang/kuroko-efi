@@ -24,20 +24,18 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	ST = SystemTable;
 	ImageHandleIn = ImageHandle;
 
-	/*
-	 * Disable watchdog
-	 */
+	/* Disable watchdog timer */
 	ST->BootServices->SetWatchdogTimer(0, 0, 0, NULL);
 
-	/*
-	 * Start shell
-	 */
+	/* Initialize VM */
 	set_attr(0xF);
 	krk_initVM(0);
 
+	/* Load additional modules */
 	krkefi_load_module();
 	_createAndBind_gzipMod();
 
+	/* Nothing else to do, start the REPL */
 	krk_startModule("__main__");
 	krk_interpret(
 		"if True:\n"
@@ -45,9 +43,9 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		" print(f'Kuroko {kuroko.version} ({kuroko.builddate}) with {kuroko.buildenv}')\n"
 		" kuroko.module_paths = ['/krk/','/']\n", "<stdin>");
 	puts("Type `license` for copyright, `exit()` to return to menu.");
-
 	krk_repl();
 
+	/* We're returning to EFI, free the resources we used. */
 	free_sbrk_heap();
 
 	return 0;
