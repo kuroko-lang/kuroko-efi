@@ -136,6 +136,7 @@ static int convert_digit(char c) {
 }
 
 #define LONG_MAX 2147483647
+#define LONG_LONG_MAX 0x7FFFffffFFFFffffULL
 
 #define strtox(max, type) \
 	if (base < 0 || base == 1 || base > 36) { \
@@ -186,6 +187,10 @@ static int convert_digit(char c) {
 
 long int strtol(const char *nptr, char **endptr, int base) {
 	strtox(LONG_MAX, unsigned long int);
+}
+
+long long int strtoll(const char *nptr, char **endptr, int base) {
+	strtox(LONG_LONG_MAX, unsigned long long int);
 }
 
 int atoi(const char * c) {
