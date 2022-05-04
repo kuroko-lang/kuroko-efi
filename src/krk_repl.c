@@ -16,6 +16,7 @@
 
 void krk_printResult(KrkValue result) {
 	if (IS_NONE(result)) return;
+	krk_attachNamedValue(&vm.builtins->fields, "_", result);
 	KrkClass * type = krk_getType(result);
 	if (type->_reprer) {
 		krk_push(result);
