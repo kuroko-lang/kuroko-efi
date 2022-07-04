@@ -193,6 +193,11 @@ long long int strtoll(const char *nptr, char **endptr, int base) {
 	strtox(LONG_LONG_MAX, unsigned long long int);
 }
 
+#define ULONG_MAX ((unsigned long)(-1))
+unsigned long int strtoul(const char *nptr, char **endptr, int base) {
+	strtox(ULONG_MAX, unsigned long int);
+}
+
 int atoi(const char * c) {
 	return strtol(c,NULL,10);
 }

@@ -9,6 +9,7 @@ extern void * calloc(size_t nmemb, size_t size);
 extern double strtod(const char *nptr, char **endptr);
 extern long int strtol(const char *nptr, char **endptr, int base);
 extern long long int strtoll(const char *nptr, char **endptr, int base);
+extern unsigned long int strtoul(const char *nptr, char **endptr, int base);
 
 extern void qsort(void *base, size_t nmemb, size_t size,
        int (*compar)(const void *, const void *));
