@@ -5,7 +5,7 @@ CC=x86_64-w64-mingw32-gcc
 KUROKO_CS = builtins.c chunk.c compiler.c debug.c exceptions.c fileio.c memory.c \
             obj_base.c obj_bytes.c obj_dict.c object.c obj_function.c obj_gen.c \
             obj_list.c obj_numeric.c obj_range.c obj_set.c obj_str.c obj_tuple.c \
-            obj_typing.c obj_slice.c scanner.c table.c value.c vm.c
+            obj_typing.c obj_slice.c obj_long.c scanner.c table.c value.c vm.c
 
 SRC = $(patsubst %,kuroko/src/%,${KUROKO_CS}) $(wildcard src/*.c)
 OBJ = $(patsubst %.c,%.o,$(sort $(SRC)))
