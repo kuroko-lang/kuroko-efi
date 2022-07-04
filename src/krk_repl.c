@@ -322,9 +322,11 @@ static int debuggerHook(KrkCallFrame * frame) {
 					krk_pop();
 					/* Call the compiled expression with no args, but claim 2 method extras. */
 					krk_push(krk_callStack(0));
-					fprintf(stderr, "\033[1;30m=> ");
+					set_attr(0x7);
+					fprintf(stderr, "=> ");
 					krk_printValue(stderr, krk_peek(0));
-					fprintf(stderr, "\033[0m\n");
+					set_attr(0xf);
+					fprintf(stderr, "\n");
 					krk_pop();
 				}
 				if (krk_currentThread.flags & KRK_THREAD_HAS_EXCEPTION) {
