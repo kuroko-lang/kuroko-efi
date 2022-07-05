@@ -478,7 +478,7 @@ int gzip_decompress(void) {
 	return status;
 }
 
-KRK_FUNC(inflate,{
+KRK_Function(inflate) {
 	FUNCTION_TAKES_EXACTLY(1);
 	CHECK_ARG(0,bytes,KrkBytes*,buf);
 
@@ -490,7 +490,7 @@ KRK_FUNC(inflate,{
 	gzip_decompress();
 
 	return finishStringBuilderBytes(&sb);
-})
+}
 
 void _createAndBind_gzipMod(void) {
 	KrkInstance * module = krk_newInstance(vm.baseClasses->moduleClass);

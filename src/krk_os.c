@@ -6,7 +6,7 @@
 
 extern EFI_SYSTEM_TABLE *ST;
 
-KRK_FUNC(uname,{
+KRK_Function(uname) {
 	KrkValue result = krk_dict_of(0, NULL, 0);
 	krk_push(result);
 
@@ -39,15 +39,16 @@ KRK_FUNC(uname,{
 #endif
 
 	return krk_pop();
-})
+}
 
 extern EFI_HANDLE ImageHandleIn;
 extern void free_sbrk_heap(void);
 
-KRK_FUNC(exit,{
+KRK_Function(exit) {
 	free_sbrk_heap();
 	ST->BootServices->Exit(ImageHandleIn, EFI_SUCCESS, 0, NULL);
-})
+	__builtin_unreachable();
+}
 
 void _createAndBind_osMod(void) {
 	KrkInstance * module = krk_newInstance(vm.baseClasses->moduleClass);

@@ -58,7 +58,7 @@ uint32_t secs_of_month(int months, int year) {
 	return days * 86400;
 }
 
-KRK_FUNC(time,{
+KRK_Function(time) {
 	EFI_TIME now_efi;
 	ST->RuntimeServices->GetTime(&now_efi, NULL);
 	double now =
@@ -71,9 +71,9 @@ KRK_FUNC(time,{
 		((double)now_efi.Nanosecond / 1000000000.0);
 
 	return FLOATING_VAL(now);
-})
+}
 
-KRK_FUNC(sleep,{
+KRK_Function(sleep) {
 	FUNCTION_TAKES_EXACTLY(1);
 	if (!IS_INTEGER(argv[0]) && !IS_FLOATING(argv[0])) {
 		return TYPE_ERROR(int or float,argv[0]);
@@ -85,7 +85,8 @@ KRK_FUNC(sleep,{
 
 	ST->BootServices->Stall(usecs);
 
-})
+	return NONE_VAL();
+}
 
 void _createAndBind_timeMod(void) {
 	KrkInstance * module = krk_newInstance(vm.baseClasses->moduleClass);
