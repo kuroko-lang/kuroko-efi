@@ -107,6 +107,17 @@ static void tab_complete_func(rline_context_t * c) {
 				n -= 2; /* To skip every other dot. */
 			}
 
+			if (isGlobal && n < count && (space[count-n-1].type == TOKEN_IMPORT || space[count-n-1].type == TOKEN_FROM)) {
+				KrkInstance * modules = krk_newInstance(vm.baseClasses->objectClass);
+				root = OBJECT_VAL(modules);
+				krk_push(root);
+				for (size_t i = 0; i < vm.modules.capacity; ++i) {
+					KrkTableEntry * entry = &vm.modules.entries[i];
+					if (IS_KWARGS(entry->key)) continue;
+					krk_attachNamedValue(&modules->fields, AS_CSTRING(entry->key), NONE_VAL());
+				}
+			}
+
 			/* Now figure out what we're completing - did we already have a partial symbol name? */
 			int length = (space[count-base].type == TOKEN_DOT) ? 0 : (space[count-base].length);
 			isGlobal = isGlobal && (length != 0);
@@ -314,7 +325,7 @@ static int debuggerHook(KrkCallFrame * frame) {
 					krk_debug_disableSingleStep();
 					/* Turn our compiled expression into a callable. */
 					krk_push(OBJECT_VAL(expression));
-					krk_push(OBJECT_VAL(krk_newClosure(expression)));
+					krk_push(OBJECT_VAL(krk_newClosure(expression, OBJECT_VAL(krk_currentThread.module))));
 					krk_swap(1);
 					krk_pop();
 					/* Stack silliness, don't ask. */
