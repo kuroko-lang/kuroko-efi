@@ -21,6 +21,7 @@ extern int fgetc(FILE * stream);
 extern FILE * fopen(const char * pathname, const char * mode);
 extern int fclose(FILE * stream);
 extern size_t fread(void * ptr, size_t size, size_t nmemb, FILE * stream);
+extern size_t fwrite(void * ptr, size_t size, size_t nmemb, FILE * stream);
 extern int fseek(FILE * stream, long offset, int whence);
 extern long ftell(FILE * stream);
 #define SEEK_SET 1
@@ -34,5 +35,4 @@ extern char * strerror(int errnum);
 extern int feof(FILE * stream);
 #define fflush(o)
 #define ferror(o) (0)
-#define fwrite(a,b,c,d) (0)
 #endif

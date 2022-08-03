@@ -130,6 +130,36 @@ size_t fread(void * ptr, size_t size, size_t nmemb, FILE * stream) {
 	return bufferSize / size;
 }
 
+size_t fwrite(void * ptr, size_t size, size_t nmemb, FILE * stream) {
+	if (stream == stdout) {
+		uint8_t * b = ptr;
+		for (size_t i = 0; i < nmemb; ++i) {
+			for (size_t j = 0; j < size; ++j) {
+				fputc(*b++, stdout);
+			}
+		}
+		return nmemb;
+	}
+	EFI_FILE * s = (EFI_FILE *)stream;
+	if (s->Revision == 0x1234) return 0;
+
+	UINTN bufferSize = size * nmemb;
+
+	EFI_STATUS status = s->Write(s, &bufferSize, ptr);
+
+	if (EFI_ERROR(status)) {
+		fprintf(stderr, "fread: read error\n");
+		return 0;
+	}
+
+	if (bufferSize == 0 && (size * nmemb != 0)) {
+		s->Revision = 0x1234;
+		return 0;
+	}
+
+	return bufferSize / size;
+}
+
 int feof(FILE * stream) {
 	EFI_FILE * s = (EFI_FILE *)stream;
 	if (s->Revision == 0x1234) return 1;
