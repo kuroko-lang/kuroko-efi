@@ -486,7 +486,7 @@ char * syn_krk_types[] = {
 	"print","set","any","all","bool","ord","chr","hex","oct","filter",
 	"sorted","bytes","getattr","sum","min","max","id","hash","map","bin",
 	"enumerate","zip","setattr","property","staticmethod","classmethod",
-	"issubclass","hasattr","delattr","NotImplemented",
+	"issubclass","hasattr","delattr","NotImplemented","abs","slice","long",
 	NULL
 };
 
@@ -504,7 +504,7 @@ char * syn_krk_exception[] = {
 	NULL
 };
 
-void paint_krk_string_shared(struct syntax_state * state, int type, int isFormat, int isTriple) {
+static void paint_krk_string_shared(struct syntax_state * state, int type, int isFormat, int isTriple) {
 	if (charat() == '\\') {
 		if (nextchar() == 'x') {
 			paintNHex(state, 2);
@@ -524,6 +524,10 @@ void paint_krk_string_shared(struct syntax_state * state, int type, int isFormat
 			paint(2, FLAG_ESCAPE);
 		}
 	} else if (isFormat && charat() == '{') {
+		if (nextchar() == '{') {
+			paint(2, FLAG_STRING);
+			return;
+		}
 		paint(1, FLAG_ESCAPE);
 		if (charat() == '}') {
 			state->i--;
@@ -559,7 +563,7 @@ void paint_krk_string_shared(struct syntax_state * state, int type, int isFormat
 	}
 }
 
-void paint_krk_string(struct syntax_state * state, int type, int isFormat) {
+static void paint_krk_string(struct syntax_state * state, int type, int isFormat) {
 	/* Assumes you came in from a check of charat() == '"' */
 	paint(1, FLAG_STRING);
 	while (charat() != -1) {
@@ -574,18 +578,18 @@ void paint_krk_string(struct syntax_state * state, int type, int isFormat) {
 	}
 }
 
-int paint_krk_numeral(struct syntax_state * state) {
+static int paint_krk_numeral(struct syntax_state * state) {
 	if (charat() == '0' && (nextchar() == 'x' || nextchar() == 'X')) {
 		paint(2, FLAG_NUMERAL);
-		while (isxdigit(charat())) paint(1, FLAG_NUMERAL);
+		while (isxdigit(charat()) || charat() == '_') paint(1, FLAG_NUMERAL);
 	} else if (charat() == '0' && (nextchar() == 'o' || nextchar() == 'O')) {
 		paint(2, FLAG_NUMERAL);
-		while (charat() >= '0' && charat() <= '7') paint(1, FLAG_NUMERAL);
+		while ((charat() >= '0' && charat() <= '7') || charat() == '_') paint(1, FLAG_NUMERAL);
 	} else if (charat() == '0' && (nextchar() == 'b' || nextchar() == 'B')) {
 		paint(2, FLAG_NUMERAL);
-		while (charat() == '0' || charat() == '1') paint(1, FLAG_NUMERAL);
+		while (charat() == '0' || charat() == '1' || charat() == '_') paint(1, FLAG_NUMERAL);
 	} else {
-		while (isdigit(charat())) paint(1, FLAG_NUMERAL);
+		while (isdigit(charat()) || charat() == '_') paint(1, FLAG_NUMERAL);
 		if (charat() == '.' && isdigit(nextchar())) {
 			paint(1, FLAG_NUMERAL);
 			while (isdigit(charat())) paint(1, FLAG_NUMERAL);
@@ -594,7 +598,7 @@ int paint_krk_numeral(struct syntax_state * state) {
 	return 0;
 }
 
-int paint_krk_triple_string(struct syntax_state * state, int type, int isFormat) {
+static int paint_krk_triple_string(struct syntax_state * state, int type, int isFormat) {
 	while (charat() != -1) {
 		if (charat() == '\\' && nextchar() == type) {
 			paint(2, FLAG_ESCAPE);
@@ -611,7 +615,7 @@ int paint_krk_triple_string(struct syntax_state * state, int type, int isFormat)
 	return (type == '"') ? 1 : 2; /* continues */
 }
 
-int syn_krk_calculate(struct syntax_state * state) {
+static int syn_krk_calculate(struct syntax_state * state) {
 	switch (state->state) {
 		case -1:
 		case 0:
