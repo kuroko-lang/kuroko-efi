@@ -48,12 +48,12 @@ static void tab_complete_func(rline_context_t * c) {
 		memcpy(tmp, c->buffer, c->offset);
 		tmp[c->offset] = '\0';
 		/* and pass it to the scanner... */
-		krk_initScanner(tmp);
+		KrkScanner scanner = krk_initScanner(tmp);
 		/* Logically, there can be at most (offset) tokens, plus some wiggle room. */
 		KrkToken * space = malloc(sizeof(KrkToken) * (c->offset + 2));
 		int count = 0;
 		do {
-			space[count++] = krk_scanToken();
+			space[count++] = krk_scanToken(&scanner);
 		} while (space[count-1].type != TOKEN_EOF && space[count-1].type != TOKEN_ERROR);
 
 		/* If count == 1, it was EOF or an error and we have nothing to complete. */
@@ -142,8 +142,7 @@ static void tab_complete_func(rline_context_t * c) {
 					KrkToken asToken = {.start = s->chars, .literalWidth = s->length};
 					KrkValue thisValue = findFromProperty(root, asToken);
 					krk_push(thisValue);
-					if (IS_CLOSURE(thisValue) || IS_BOUND_METHOD(thisValue) ||
-						(IS_NATIVE(thisValue) && !(AS_OBJECT(thisValue)->flags & KRK_OBJ_FLAGS_FUNCTION_IS_DYNAMIC_PROPERTY))) {
+					if (IS_CLOSURE(thisValue) || IS_BOUND_METHOD(thisValue) || IS_NATIVE(thisValue)) {
 						size_t allocSize = s->length + 2;
 						char * tmp = malloc(allocSize);
 						size_t len = snprintf(tmp, allocSize, "%s(", s->chars);
