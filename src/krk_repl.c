@@ -40,9 +40,19 @@ static KrkValue findFromProperty(KrkValue current, KrkToken next) {
 	return value;
 }
 
+static char * syn_krk_keywords[] = {
+	"and","class","def","else","for","if","in","import","del",
+	"let","not","or","return","while","try","except","raise",
+	"continue","break","as","from","elif","lambda","with","is",
+	"pass","assert","yield","finally","async","await",
+	"True","False","None",
+	NULL
+};
+
 static void tab_complete_func(rline_context_t * c) {
 	/* Figure out where the cursor is and if we should be completing anything. */
 	if (c->offset) {
+		size_t stackIn = krk_currentThread.stackTop - krk_currentThread.stack;
 		/* Copy up to the cursor... */
 		char * tmp = malloc(c->offset + 1);
 		memcpy(tmp, c->buffer, c->offset);
@@ -149,6 +159,8 @@ static void tab_complete_func(rline_context_t * c) {
 						s = krk_takeString(tmp, len);
 						krk_pop();
 						krk_push(OBJECT_VAL(s));
+					} else {
+						krk_pop();
 					}
 
 					/* If this symbol is shorter than the current submatch, skip it. */
@@ -179,7 +191,6 @@ static void tab_complete_func(rline_context_t * c) {
 					root = OBJECT_VAL(vm.builtins);
 					continue;
 				} else if (isGlobal && AS_OBJECT(root) == (KrkObj*)vm.builtins) {
-					extern char * syn_krk_keywords[];
 					KrkInstance * fakeKeywordsObject = krk_newInstance(vm.baseClasses->objectClass);
 					root = OBJECT_VAL(fakeKeywordsObject);
 					krk_push(root);
@@ -246,7 +257,7 @@ _toomany:
 _cleanup:
 		free(tmp);
 		free(space);
-		krk_resetStack();
+		krk_currentThread.stackTop = &krk_currentThread.stack[stackIn];
 		return;
 	}
 }
@@ -514,6 +525,13 @@ int krk_repl(void) {
 			if (rline(buf, 4096) == 0) {
 				valid = 0;
 				exitRepl = 1;
+				break;
+			}
+			if (krk_currentThread.flags & KRK_THREAD_SIGNALLED) {
+				/* We should actually be properly raising the interrupt and printing it with an empty traceback, but whatever. */
+				krk_currentThread.flags &= ~(KRK_THREAD_SIGNALLED); /* Clear signal flag */
+				printf("KeyboardInterrupt\n");
+				valid = 0;
 				break;
 			}
 			if (buf[strlen(buf)-1] != '\n') {
