@@ -43,6 +43,7 @@ int rline_history_offset = 0;
 int rline_scroll = 0;
 char * rline_exit_string = "exit\n";
 int rline_terminal_width = 0;
+char * rline_preload = NULL;
 
 void rline_history_insert(char * str) {
 	if (str[strlen(str)-1] == '\n') {
@@ -95,7 +96,7 @@ char * rline_history_prev(int item) {
  * Conceptually similar to its predecessor, this implementation is much
  * less cool, as it uses three separate state tables and more shifts.
  */
-uint32_t decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
+static inline uint32_t decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
 	static int state_table[32] = {
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, /* 0xxxxxxx */
 		1,1,1,1,1,1,1,1,                 /* 10xxxxxx */
@@ -313,7 +314,7 @@ static int codepoint_width(int codepoint) {
 	return 1;
 }
 
-void recalculate_tabs(line_t * line) {
+static void recalculate_tabs(line_t * line) {
 	int j = 0;
 	for (int i = 0; i < line->actual; ++i) {
 		if (line->text[i].codepoint == '\t') {
@@ -389,7 +390,7 @@ struct syntax_state {
  * Match and paint a single keyword. Returns 1 if the keyword was matched and 0 otherwise,
  * so it can be used for prefix checking for things that need further special handling.
  */
-int match_and_paint(struct syntax_state * state, const char * keyword, int flag, int (*keyword_qualifier)(int c)) {
+static int match_and_paint(struct syntax_state * state, const char * keyword, int flag, int (*keyword_qualifier)(int c)) {
 	if (keyword_qualifier(lastchar())) return 0;
 	if (!keyword_qualifier(charat())) return 0;
 	int i = state->i;
@@ -414,7 +415,7 @@ int match_and_paint(struct syntax_state * state, const char * keyword, int flag,
  * Find keywords from a list and paint them, assuming they aren't in the middle of other words.
  * Returns 1 if a keyword from the last was found, otherwise 0.
  */
-int find_keywords(struct syntax_state * state, char ** keywords, int flag, int (*keyword_qualifier)(int c)) {
+static int find_keywords(struct syntax_state * state, char ** keywords, int flag, int (*keyword_qualifier)(int c)) {
 	if (keyword_qualifier(lastchar())) return 0;
 	if (!keyword_qualifier(charat())) return 0;
 	for (char ** keyword = keywords; *keyword; ++keyword) {
@@ -432,12 +433,12 @@ int find_keywords(struct syntax_state * state, char ** keywords, int flag, int (
 /**
  * This is a basic character matcher for "keyword" characters.
  */
-int simple_keyword_qualifier(int c) {
+static int simple_keyword_qualifier(int c) {
 	return isalnum(c) || (c == '_');
 }
 
 
-int common_comment_buzzwords(struct syntax_state * state) {
+static int common_comment_buzzwords(struct syntax_state * state) {
 	if (match_and_paint(state, "TODO", FLAG_NOTICE, simple_keyword_qualifier)) { return 1; }
 	else if (match_and_paint(state, "XXX", FLAG_NOTICE, simple_keyword_qualifier)) { return 1; }
 	else if (match_and_paint(state, "FIXME", FLAG_ERROR, simple_keyword_qualifier)) { return 1; }
@@ -449,7 +450,7 @@ int common_comment_buzzwords(struct syntax_state * state) {
  * (Some languages have comments that can continue with a \ - don't use this!)
  * Assumes you've already painted your comment start characters.
  */
-int paint_comment(struct syntax_state * state) {
+static int paint_comment(struct syntax_state * state) {
 	while (charat() != -1) {
 		if (common_comment_buzzwords(state)) continue;
 		else { paint(1, FLAG_COMMENT); }
@@ -457,11 +458,11 @@ int paint_comment(struct syntax_state * state) {
 	return -1;
 }
 
-int c_keyword_qualifier(int c) {
+static int c_keyword_qualifier(int c) {
 	return isalnum(c) || (c == '_');
 }
 
-void paintNHex(struct syntax_state * state, int n) {
+static void paintNHex(struct syntax_state * state, int n) {
 	paint(2, FLAG_ESCAPE);
 	/* Why is my FLAG_ERROR not valid in rline? */
 	for (int i = 0; i < n; ++i) {
@@ -469,7 +470,7 @@ void paintNHex(struct syntax_state * state, int n) {
 	}
 }
 
-char * syn_krk_keywords[] = {
+static char * syn_krk_keywords[] = {
 	"and","class","def","else","for","if","in","import","del",
 	"let","not","or","return","while","try","except","raise",
 	"continue","break","as","from","elif","lambda","with","is",
@@ -477,7 +478,7 @@ char * syn_krk_keywords[] = {
 	NULL
 };
 
-char * syn_krk_types[] = {
+static char * syn_krk_types[] = {
 	/* built-in functions */
 	"self", "super", /* implicit in a class method */
 	"len", "str", "int", "float", "dir", "repr", /* global functions from __builtins__ */
@@ -490,17 +491,17 @@ char * syn_krk_types[] = {
 	NULL
 };
 
-char * syn_krk_special[] = {
+static char * syn_krk_special[] = {
 	"True","False","None",
 	/* Exception names */
 	NULL
 };
 
-char * syn_krk_exception[] = {
+static char * syn_krk_exception[] = {
 	"Exception", "TypeError", "ArgumentError", "IndexError", "KeyError",
 	"AttributeError", "NameError", "ImportError", "IOError", "ValueError",
 	"KeyboardInterrupt", "ZeroDivisionError", "NotImplementedError", "SyntaxError",
-	"AssertionError",
+	"AssertionError", "BaseException", "OSError", "SystemError",
 	NULL
 };
 
@@ -660,7 +661,7 @@ static int syn_krk_calculate(struct syntax_state * state) {
 	return -1;
 }
 
-char * syn_krk_dbg_commands[] = {
+static char * syn_krk_dbg_commands[] = {
 	"s", "skip",
 	"c", "continue",
 	"q", "quit",
@@ -674,12 +675,12 @@ char * syn_krk_dbg_commands[] = {
 	NULL,
 };
 
-char * syn_krk_dbg_info_types[] = {
+static char * syn_krk_dbg_info_types[] = {
 	"breakpoints",
 	NULL,
 };
 
-int syn_krk_dbg_calculate(struct syntax_state * state) {
+static int syn_krk_dbg_calculate(struct syntax_state * state) {
 	if (state->state < 1) {
 		if (state->i == 0) {
 			if (match_and_paint(state, "p", FLAG_KEYWORD, c_keyword_qualifier) ||
@@ -739,7 +740,7 @@ static int flag_to_color(int _flag) {
 	}
 }
 
-struct syntax_definition {
+static struct syntax_definition {
 	char * name;
 	int (*calculate)(struct syntax_state *);
 	int tabIndents;
@@ -1168,23 +1169,25 @@ static void line_delete(line_t * line, int offset) {
  */
 static void delete_at_cursor(void) {
 	if (column > 0) {
-		if (the_line->text[column-1].codepoint == ' ') {
-			/* Delete this space */
-			line_delete(the_line, column);
-			column--;
-			if (offset > 0) offset--;
+		line_delete(the_line, column);
+		column--;
+		if (offset > 0) offset--;
+	}
+}
 
-			while (column > 0 && the_line->text[column-1].codepoint == ' ' && (column % 4 != 0)) {
-				line_delete(the_line, column);
-				column--;
-				if (offset > 0) offset--;
-			}
-		} else {
-			line_delete(the_line, column);
-			column--;
-			if (offset > 0) offset--;
+static void smart_backspace(void) {
+	if (column > 0) {
+		int i;
+		for (i = 0; i < column; ++i) {
+			if (the_line->text[i].codepoint != ' ') break;
+		}
+		if (i == column) {
+			delete_at_cursor();
+			while (column > 0 && (column % 4)) delete_at_cursor();
+			return;
 		}
 	}
+	delete_at_cursor();
 }
 
 /**
@@ -1194,13 +1197,15 @@ static void delete_word(void) {
 	if (!the_line->actual) return;
 	if (!column) return;
 
+	while (column > 0 && the_line->text[column-1].codepoint == ' ') {
+		delete_at_cursor();
+	}
+
 	do {
 		if (column > 0) {
-			line_delete(the_line, column);
-			column--;
-			if (offset > 0) offset--;
+			delete_at_cursor();
 		}
-	} while (column && the_line->text[column-1].codepoint != ' ');
+	} while (column > 0 && the_line->text[column-1].codepoint != ' ');
 }
 
 /**
@@ -1217,9 +1222,9 @@ static void insert_char(uint32_t c) {
 	column++;
 }
 
-char * paren_pairs = "()[]{}<>";
+static char * paren_pairs = "()[]{}<>";
 
-int is_paren(int c) {
+static int is_paren(int c) {
 	char * p = paren_pairs;
 	while (*p) {
 		if (c == *p) return 1;
@@ -1228,7 +1233,7 @@ int is_paren(int c) {
 	return 0;
 }
 
-void find_matching_paren(int * out_col, int in_col) {
+static void find_matching_paren(int * out_col, int in_col) {
 	if (column - in_col > the_line->actual) {
 		return; /* Invalid cursor position */
 	}
@@ -1272,7 +1277,7 @@ _match_found:
 	*out_col = col;
 }
 
-void redraw_matching_paren(int col) {
+static void redraw_matching_paren(int col) {
 	for (int j = 0; j < the_line->actual; ++j) {
 		if (j == col) {
 			the_line->text[j].flags |= FLAG_SELECT;
@@ -1282,7 +1287,7 @@ void redraw_matching_paren(int col) {
 	}
 }
 
-void highlight_matching_paren(void) {
+static void highlight_matching_paren(void) {
 	int col = -1;
 	if (column < the_line->actual && is_paren(the_line->text[column].codepoint)) {
 		find_matching_paren(&col, 0);
@@ -1403,31 +1408,18 @@ static void history_previous(void) {
  * Cycle to next history entry
  */
 static void history_next(void) {
-	if (rline_scroll > 1) {
+	if (rline_scroll >= 1) {
+		unsigned char * buf;
+		if (rline_scroll > 1) buf = (unsigned char *)rline_history_prev(rline_scroll-1);
+		else buf = (unsigned char *)temp_buffer;
 		rline_scroll--;
 
 		/* Copy in from history */
 		the_line->actual = 0;
 		column = 0;
 		loading = 1;
-		unsigned char * buf = (unsigned char *)rline_history_prev(rline_scroll);
 		uint32_t istate = 0, c = 0;
 		for (unsigned int i = 0; i < strlen((char *)buf); ++i) {
-			if (!decode(&istate, &c, buf[i])) {
-				insert_char(c);
-			}
-		}
-		loading = 0;
-	} else if (rline_scroll == 1) {
-		/* Copy in from temp */
-		rline_scroll = 0;
-
-		the_line->actual = 0;
-		column = 0;
-		loading = 1;
-		char * buf = temp_buffer;
-		uint32_t istate = 0, c = 0;
-		for (unsigned int i = 0; i < strlen(buf); ++i) {
 			if (!decode(&istate, &c, buf[i])) {
 				insert_char(c);
 			}
@@ -1581,8 +1573,6 @@ static void call_rline_func(rline_callback_t func, rline_context_t * context) {
 	rline_place_cursor();
 }
 
-char * rline_preload = NULL;
-
 /**
  * Perform actual interactive line editing.
  *
@@ -1637,9 +1627,20 @@ static int read_line(void) {
 					timeout++;
 				}
 				break;
+			case 3: /* ctrl-c */
+				/* Kill the whole line */
+				set_colors(COLOR_ALT_FG, COLOR_ALT_BG);
+				printf("^C");
+				loading = 1;
+				column = the_line->actual;
+				while (the_line->actual) {
+					delete_at_cursor();
+				}
+				insert_char(' '); /* insert a space so there's something */
+				return 0;
 			case DELETE_KEY:
 			case BACKSPACE_KEY:
-				delete_at_cursor();
+				smart_backspace();
 				break;
 			case 13:
 			case ENTER_KEY:
@@ -1744,3 +1745,6 @@ void rline_insert(rline_context_t * context, const char * what) {
 	context->offset += insertion_length;
 }
 
+uint32_t utf8_decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
+	return decode(state,codep,byte);
+}

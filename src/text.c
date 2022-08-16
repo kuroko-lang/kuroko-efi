@@ -7,7 +7,7 @@
 
 extern EFI_SYSTEM_TABLE *ST;
 
-extern uint32_t decode(uint32_t* state, uint32_t* codep, uint32_t byte);
+extern uint32_t utf8_decode(uint32_t* state, uint32_t* codep, uint32_t byte);
 
 static unsigned short bad_ucs2(int c) {
 	switch (c) {
@@ -27,7 +27,7 @@ static unsigned short bad_ucs2(int c) {
 static uint32_t istate = 0, c = 0;
 void print_(unsigned char * str) {
 	while (*str) {
-		if (!decode(&istate, &c, *str)) {
+		if (!utf8_decode(&istate, &c, *str)) {
 			if (c == '\n') {
 				uint16_t string[] = {'\r', 0};
 				ST->ConOut->OutputString(ST->ConOut, string);
