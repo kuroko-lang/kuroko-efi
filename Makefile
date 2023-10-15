@@ -11,7 +11,7 @@ KUROKO_CS = builtins.c chunk.c compiler.c debug.c exceptions.c fileio.c memory.c
 SRC = $(patsubst %,kuroko/src/%,${KUROKO_CS}) $(wildcard src/*.c)
 OBJ = $(patsubst %.c,%.o,$(sort $(SRC)))
 
-CFLAGS = -m64 -ffreestanding -D__efi -DSTATIC_ONLY -DKRK_DISABLE_THREADS -DNDEBUG -DEFI_PLATFORM \
+CFLAGS = -m64 -ffreestanding -D__efi -DKRK_STATIC_ONLY -DKRK_DISABLE_THREADS -DNDEBUG -DEFI_PLATFORM \
          -Isrc/ -Ikuroko/src/ -nostdinc -Iinclude -I/usr/include/efi -I/usr/include/efi/x86_64 -O2 -U_WIN32
 LDFLAGS = -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main
 
