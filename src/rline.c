@@ -880,6 +880,11 @@ static void render_line(void) {
 	set_attr(0x0f);
 	printf("\r%s", prompt, the_line->actual);
 
+	if (offset) {
+		set_colors(COLOR_ALT_FG, COLOR_ALT_BG);
+		printf("\b<");
+	}
+
 	int i = 0; /* Offset in char_t line data entries */
 	int j = 0; /* Offset in terminal cells */
 
