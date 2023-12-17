@@ -77,6 +77,21 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	krkefi_load_module();
 	_createAndBind_gzipMod();
 
+	krk_module_init_os();
+	krk_module_init_time();
+
+	/* Include dis */
+#define BUNDLED(name) do { \
+	extern KrkValue krk_module_onload_ ## name (KrkString*); \
+	KrkValue moduleOut = krk_module_onload_ ## name (NULL); \
+	krk_attachNamedValue(&vm.modules, # name, moduleOut); \
+	krk_attachNamedObject(&AS_INSTANCE(moduleOut)->fields, "__name__", (KrkObj*)krk_copyString(#name, sizeof(#name)-1)); \
+	krk_attachNamedValue(&AS_INSTANCE(moduleOut)->fields, "__file__", NONE_VAL()); \
+} while (0)
+
+	BUNDLED(dis);
+	BUNDLED(fileio);
+
 	/* Nothing else to do, start the REPL */
 	krk_startModule("__main__");
 	krk_interpret(
