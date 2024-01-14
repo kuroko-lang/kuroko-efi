@@ -21,12 +21,15 @@ void krk_printResult(KrkValue result) {
 	if (type->_reprer) {
 		krk_push(result);
 		result = krk_callDirect(type->_reprer, 1);
-		if (IS_STRING(result)) {
-			set_attr(0x7);
-			printf(" => ");
-			puts(AS_CSTRING(result));
-			set_attr(0xf);
-		}
+	} else if (type->_tostr) {
+		krk_push(result);
+		result = krk_callDirect(type->_tostr, 1);
+	}
+	if (IS_STRING(result)) {
+		set_attr(0x7);
+		printf(" => ");
+		puts(AS_CSTRING(result));
+		set_attr(0xf);
 	}
 }
 
@@ -343,11 +346,7 @@ static int debuggerHook(KrkCallFrame * frame) {
 					krk_pop();
 					/* Call the compiled expression with no args, but claim 2 method extras. */
 					krk_push(krk_callStack(0));
-					set_attr(0x7);
-					fprintf(stderr, "=> ");
-					krk_printValue(stderr, krk_peek(0));
-					set_attr(0xf);
-					fprintf(stderr, "\n");
+					krk_printResult(krk_peek(0));
 					krk_pop();
 				}
 				if (krk_currentThread.flags & KRK_THREAD_HAS_EXCEPTION) {
@@ -500,7 +499,7 @@ int krk_repl(void) {
 	while (!exitRepl) {
 		size_t lineCapacity = 8;
 		size_t lineCount = 0;
-		char ** lines = ALLOCATE(char *, lineCapacity);
+		char ** lines = KRK_ALLOCATE(char *, lineCapacity);
 		size_t totalData = 0;
 		int valid = 1;
 		char * allData = NULL;
@@ -540,8 +539,8 @@ int krk_repl(void) {
 			}
 			if (lineCapacity < lineCount + 1) {
 				size_t old = lineCapacity;
-				lineCapacity = GROW_CAPACITY(old);
-				lines = GROW_ARRAY(char *,lines,old,lineCapacity);
+				lineCapacity = KRK_GROW_CAPACITY(old);
+				lines = KRK_GROW_ARRAY(char *,lines,old,lineCapacity);
 			}
 			int i = lineCount++;
 			lines[i] = strdup(buf);
@@ -590,7 +589,7 @@ int krk_repl(void) {
 			rline_scroll = 0;
 			free(lines[i]);
 		}
-		FREE_ARRAY(char *, lines, lineCapacity);
+		KRK_FREE_ARRAY(char *, lines, lineCapacity);
 		if (valid) {
 			KrkValue result = krk_interpret(allData, "<stdin>");
 			krk_printResult(result);
