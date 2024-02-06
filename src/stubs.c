@@ -742,13 +742,42 @@ char * strcat(char *dest, const char *src) {
 }
 
 void ___chkstk_ms(void) { }
+void __chkstk(void) { }
+void _fltused(void) { }
 
+#ifdef __x86_64__
 void * memcpy(void * restrict dest, const void * restrict src, size_t n) {
 	asm volatile("rep movsb"
 	            : : "D"(dest), "S"(src), "c"(n)
 	            : "flags", "memory");
 	return dest;
 }
+#else
+void * memcpy(void * restrict dest, const void * restrict src, size_t n) {
+	uint64_t * d_64 = dest;
+	const uint64_t * s_64 = src;
+
+	for (; n >= 8; n -= 8) {
+		*d_64++ = *s_64++;
+	}
+
+	uint32_t * d_32 = (void*)d_64;
+	const uint32_t * s_32 = (const void*)s_64;
+
+	for (; n >= 4; n -= 4) {
+		*d_32++ = *s_32++;
+	}
+
+	uint8_t * d = (void*)d_32;
+	const uint8_t * s = (const void*)s_32;
+
+	for (; n > 0; n--) {
+		*d++ = *s++;
+	}
+
+	return dest;
+}
+#endif
 
 void * memset(void * dest, int c, size_t n) {
 	size_t i = 0;
@@ -757,3 +786,22 @@ void * memset(void * dest, int c, size_t n) {
 	}
 	return dest;
 }
+
+double floor(double x) {
+	if (x == 0.0) return x;
+	union { double asDbl; uint64_t asInt; } u = {x};
+	int sign     = (u.asInt >> 63);
+	int exponent = ((u.asInt >> 52) & 0x7FF) - 0x3FF;
+	uint64_t man = (u.asInt & 0xfffffffffffffUL);
+	if (exponent >= 52) return x;
+	if (exponent < 0) {
+		if (!sign) return 0.0;
+		return -1.0;
+	}
+	uint64_t out = man >> (52 - exponent);
+	if (sign && ((0xfffffffffffffUL >> (52 - exponent)) & man)) out++;
+	u.asInt &= ~0xfffffffffffffUL;
+	u.asInt |= out << (52 - exponent);
+	return u.asDbl;
+}
+

@@ -1473,6 +1473,7 @@ static int handle_escape(int c) {
 		default:
 			break;
 	}
+	return 0;
 }
 
 static void get_initial_termios(void) {

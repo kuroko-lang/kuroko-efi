@@ -32,11 +32,15 @@ KRK_Function(uname) {
 	len = snprintf(tmp, 20, "%x", ST->FirmwareRevision);
 	krk_attachNamedObject(AS_DICT(result), "version",  (KrkObj*)krk_copyString(tmp,len));
 
+	krk_attachNamedObject(AS_DICT(result), "machine",  (KrkObj*)S(
 #ifdef __x86_64__
-	krk_attachNamedObject(AS_DICT(result), "machine",  (KrkObj*)S("x86-64"));
+	"x86_64"
+#elif defined(__aarch64__)
+	"aarch64"
 #else
-	krk_attachNamedObject(AS_DICT(result), "machine",  (KrkObj*)S("i386"));
+	"unknown"
 #endif
+	));
 
 	return krk_pop();
 }

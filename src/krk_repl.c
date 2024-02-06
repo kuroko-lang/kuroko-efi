@@ -597,5 +597,6 @@ int krk_repl(void) {
 		}
 		(void)blockWidth;
 	}
+	return 0;
 }
 

@@ -77,7 +77,9 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	krkefi_load_module();
 	_createAndBind_gzipMod();
 
+	extern void krk_module_init_os(void);
 	krk_module_init_os();
+	extern void krk_module_init_time(void);
 	krk_module_init_time();
 
 	/* Include dis */

@@ -365,7 +365,6 @@ static int uncompressed(void) {
 /**
  * Decompress DEFLATE-compressed data.
  */
-__attribute__((optimize("O2")))
 __attribute__((hot))
 int deflate_decompress(void) {
 	bit_buffer = 0;
