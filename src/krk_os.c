@@ -46,10 +46,11 @@ KRK_Function(uname) {
 }
 
 extern EFI_HANDLE ImageHandleIn;
-extern void free_sbrk_heap(void);
+
+extern void efi_run_exit_hooks(void);
 
 KRK_Function(exit) {
-	free_sbrk_heap();
+	efi_run_exit_hooks();
 	ST->BootServices->Exit(ImageHandleIn, EFI_SUCCESS, 0, NULL);
 	__builtin_unreachable();
 }

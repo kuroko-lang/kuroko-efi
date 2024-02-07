@@ -13,7 +13,7 @@ EFI_SYSTEM_TABLE *ST;
 
 extern void krk_printResult(unsigned long long val);
 extern int krk_repl(void);
-extern void free_sbrk_heap(void);
+extern void free_sbrk_heap(void*);
 extern void krkefi_load_module(void);
 extern void _createAndBind_gzipMod(void);
 
@@ -37,22 +37,55 @@ static EFI_STATUS handle_ctrl_c(EFI_KEY_DATA * data) {
 	return 0;
 }
 
+static void ** callback_handles = NULL;
+
+struct ExitHook {
+	void (*callback)(void *);
+	void * data;
+	struct ExitHook * previous;
+};
+
+static struct ExitHook * tail = NULL;
+
+void efi_register_exit_hook(void (*callback)(void *), void * data) {
+	struct ExitHook * new = malloc(sizeof(struct ExitHook));
+	new->callback = callback;
+	new->data = data;
+	new->previous = tail;
+	tail = new;
+}
+
+void efi_run_exit_hooks(void) {
+	struct ExitHook * cur = tail;
+	while (cur) {
+		cur->callback(cur->data);
+		cur = cur->previous;
+	}
+}
+
+static void unregister_callback(void * data) {
+	void ** pair = data;
+	EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL * input_ex = pair[0];
+	input_ex->UnregisterKeyNotify(input_ex, pair[1]);
+}
+
 static int register_ctrl_callback(void) {
 	UINTN count;
 	EFI_HANDLE * handles;
 	EFI_STATUS status = ST->BootServices->LocateHandleBuffer(ByProtocol, &efi_simple_text_input_ex_protocol_guid, NULL, &count, &handles);
+	if (EFI_ERROR(status)) return -1;
 
-	if (EFI_ERROR(status)) {
-		return -1;
-	}
-
+	callback_handles = calloc(sizeof(void*), count);
 	for (UINTN i = 0; i < count; ++i) {
 		EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL * input_ex;
 		void * handle;
 		status = ST->BootServices->HandleProtocol(handles[i], &efi_simple_text_input_ex_protocol_guid, (void **)&input_ex);
 		if (EFI_ERROR(status)) continue;
 		status = input_ex->RegisterKeyNotify(input_ex, &ctrl_c, handle_ctrl_c, &handle);
-		if (EFI_ERROR(status)) continue;
+		void ** pair = malloc(sizeof(void*) * 2);
+		pair[0] = input_ex;
+		pair[1] = handle;
+		efi_register_exit_hook(unregister_callback, pair);
 	}
 
 	return 0;
@@ -109,6 +142,8 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	status = ST->BootServices->OpenProtocol(
 		ImageHandle, &efi_shell_parameters_protocol_guid, (void **)&args,
 		ImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+	efi_register_exit_hook(free_sbrk_heap,NULL);
 
 	/* Initialize VM */
 	set_attr(0xF);
@@ -189,7 +224,7 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	}
 
 	/* We're returning to EFI, free the resources we used. */
-	free_sbrk_heap();
+	efi_run_exit_hooks();
 
 	return 0;
 }
