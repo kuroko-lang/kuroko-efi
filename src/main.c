@@ -58,8 +58,9 @@ void efi_register_exit_hook(void (*callback)(void *), void * data) {
 void efi_run_exit_hooks(void) {
 	struct ExitHook * cur = tail;
 	while (cur) {
+		struct ExitHook * next = cur->previous;
 		cur->callback(cur->data);
-		cur = cur->previous;
+		cur = next;
 	}
 }
 
@@ -225,6 +226,5 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
 	/* We're returning to EFI, free the resources we used. */
 	efi_run_exit_hooks();
-
 	return 0;
 }
