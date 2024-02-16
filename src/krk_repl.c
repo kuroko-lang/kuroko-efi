@@ -243,7 +243,7 @@ _toomany:
 						fprintf(stderr, "%-*s  ", maxWidth, matches[i]);
 						column += 1;
 						if (column >= colsPerLine) {
-							fprintf(stderr, "\n");
+							if (column > colsPerLine) fprintf(stderr, "\n"); /* EFI shell doesn't have right margin hold */
 							column = 0;
 						}
 					}
