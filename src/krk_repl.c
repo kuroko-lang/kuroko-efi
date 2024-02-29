@@ -238,13 +238,16 @@ _toomany:
 					/* Now how many can we fit in a screen */
 					int colsPerLine = rline_terminal_width / (maxWidth + 2); /* +2 for the spaces */
 					fprintf(stderr, "\n");
+					int curcol = 0;
 					int column = 0;
 					for (int i = 0; i < matchCount; ++i) {
 						fprintf(stderr, "%-*s  ", maxWidth, matches[i]);
+						curcol += maxWidth + 2;
 						column += 1;
 						if (column >= colsPerLine) {
-							if (column > colsPerLine) fprintf(stderr, "\n"); /* EFI shell doesn't have right margin hold */
+							if (curcol < rline_terminal_width) fprintf(stderr, "\n"); /* EFI shell doesn't have right margin hold */
 							column = 0;
+							curcol = 0;
 						}
 					}
 					if (column != 0) fprintf(stderr, "\n");
