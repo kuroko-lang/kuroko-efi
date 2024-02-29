@@ -127,6 +127,11 @@ static int to_eight(uint32_t codepoint, char * out) {
 	return strlen(out);
 }
 
+static INT32 original_console_mode = 0;
+static void reset_attributes(void* unused) {
+	ST->ConOut->SetAttribute(ST->ConOut, original_console_mode);
+}
+
 EFI_STATUS
 	EFIAPI
 efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
@@ -145,6 +150,9 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		ImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
 
 	efi_register_exit_hook(free_sbrk_heap,NULL);
+
+	original_console_mode = ST->ConOut->Mode->Attribute;
+	efi_register_exit_hook(reset_attributes,NULL);
 
 	/* Initialize VM */
 	set_attr(0xF);
