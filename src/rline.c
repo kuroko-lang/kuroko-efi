@@ -1649,6 +1649,21 @@ static int read_line(void) {
 				}
 				insert_char(' '); /* insert a space so there's something */
 				return 0;
+			case 4: /* ctrl-d */
+				if (column == 0 && the_line->actual == 0) {
+					for (char *_c = rline_exit_string; *_c; ++_c) {
+						insert_char(*_c);
+					}
+					redraw_matching_paren(-1);
+					render_line();
+					rline_place_cursor();
+					if (!*rline_exit_string) {
+						set_colors(COLOR_ALT_FG, COLOR_ALT_BG);
+						printf("^D");
+					}
+					return 1;
+				}
+				break; /* or ignore */
 			case DELETE_KEY:
 			case BACKSPACE_KEY:
 				smart_backspace();

@@ -509,7 +509,7 @@ int krk_repl(void) {
 		int inBlock = 0;
 		int blockWidth = 0;
 		rline_exp_set_prompts(PROMPT_MAIN, "", 4, 0);
-		rline_exit_string="exit";
+		rline_exit_string="";
 		rline_exp_set_syntax("krk");
 		rline_exp_set_tab_complete_func(tab_complete_func);
 
