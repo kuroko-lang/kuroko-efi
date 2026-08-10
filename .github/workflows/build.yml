@@ -10,7 +10,7 @@ jobs:
             fetch-depth: 0
             submodules: true
       - name: Install Dependencies
-        run: sudo apt-get install -y mtools lld gnu-efi
+        run: sudo apt-get install -y mtools lld gnu-efi xorriso
       - name: Force install aarch64 EFI headers
         run: sudo cp -r .github/aarch64 /usr/include/efi/
       - name: Build
@@ -31,7 +31,7 @@ jobs:
             fetch-depth: 0
             submodules: true
       - name: Install Dependencies
-        run: sudo apt-get install -y mtools lld gnu-efi
+        run: sudo apt-get install -y mtools lld gnu-efi xorriso
       - name: Build
         run: make ARCH=x86_64
       - name: Upload Artifacts
