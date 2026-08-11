@@ -10,9 +10,6 @@
 
 extern void print_(char * str);
 
-void abort(void) {print_("ABORT\n"); while(1); }
-void exit(int status) {print_("EXIT\n"); while(1); }
-
 int memcmp(const void * vl, const void * vr, size_t n) {
 	const unsigned char *l = vl;
 	const unsigned char *r = vr;

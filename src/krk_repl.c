@@ -497,8 +497,11 @@ _dbgQuit:
 	return KRK_DEBUGGER_QUIT;
 }
 
-int krk_repl(void) {
+void krk_repl_debug_hook(void) {
 	krk_debug_registerCallback(debuggerHook);
+}
+
+int krk_repl(void) {
 	while (!exitRepl) {
 		size_t lineCapacity = 8;
 		size_t lineCount = 0;
