@@ -5,6 +5,7 @@
 #include <kuroko/util.h>
 
 extern EFI_SYSTEM_TABLE *ST;
+extern EFI_EVENT efi_timer_event;
 
 uint32_t secs_of_years(int years) {
 	uint32_t days = 0;
@@ -79,11 +80,13 @@ KRK_Function(sleep) {
 		return TYPE_ERROR(int or float,argv[0]);
 	}
 
-	uint64_t usecs = (IS_INTEGER(argv[0]) ? AS_INTEGER(argv[0]) :
+	uint64_t delay = (IS_INTEGER(argv[0]) ? AS_INTEGER(argv[0]) :
 	                 (IS_FLOATING(argv[0]) ? AS_FLOATING(argv[0]) : 0)) *
-	                 1000000;
+	                 10000000;
 
-	ST->BootServices->Stall(usecs);
+	ST->BootServices->SetTimer(efi_timer_event, TimerRelative, delay);
+	UINTN event_ind = 0;
+	ST->BootServices->WaitForEvent(1, &efi_timer_event, &event_ind);
 
 	return NONE_VAL();
 }

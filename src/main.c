@@ -21,6 +21,8 @@ static EFI_GUID efi_shell_parameters_protocol_guid = EFI_SHELL_PARAMETERS_PROTOC
 static EFI_GUID efi_simple_text_input_ex_protocol_guid = EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL_GUID;
 static EFI_GUID efi_loaded_image_protocol_guid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
 
+EFI_EVENT efi_timer_event = {};
+
 static EFI_KEY_DATA ctrl_c = {
 	{ 0, 'c' }, { 0x80000008, 0 }
 };
@@ -31,6 +33,8 @@ static EFI_STATUS handle_ctrl_c(EFI_KEY_DATA * data) {
 		EFI_INPUT_KEY Key;
 		ST->ConIn->ReadKeyStroke(ST->ConIn, &Key);
 	}
+
+	ST->BootServices->SetTimer(efi_timer_event, TimerRelative, 0);
 
 	/* Set the signalled state */
 	krk_currentThread.flags |= KRK_THREAD_SIGNALLED;
@@ -150,6 +154,8 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		ImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
 
 	efi_register_exit_hook(free_sbrk_heap,NULL);
+
+	ST->BootServices->CreateEvent(EVT_TIMER, TPL_CALLBACK, NULL, NULL, &efi_timer_event);
 
 	original_console_mode = ST->ConOut->Mode->Attribute;
 	efi_register_exit_hook(reset_attributes,NULL);
